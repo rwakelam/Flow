@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+	<Product Id="*" Name="SynchronisationService" Language="1033" Version="!(bind.FileVersion.SynchronisationService.exe)" Manufacturer="Richsoft" UpgradeCode="3b18bef2-3bfe-458f-9053-a454282c001b">
+		<Package InstallerVersion="200" Compressed="yes" InstallScope="perMachine" Description="SynchronisationService installer" />
+
+		<MajorUpgrade DowngradeErrorMessage="A newer version of SynchronisationService is already installed." />
+		<MediaTemplate EmbedCab="yes" />
+
+		<Feature Id="ProductFeature" Title="Richsoft.SynchronisationService" Level="1">
+			<ComponentGroupRef Id="ProductComponents" />
+		</Feature>
+	</Product>
+
+	<Fragment>
+		<Directory Id="TARGETDIR" Name="SourceDir">
+			<Directory Id="ProgramFilesFolder">
+        <Directory Id='Richsoft' Name='Richsoft'>
+          <Directory Id="INSTALLFOLDER" Name="SynchronisationService" />
+        </Directory>
+			</Directory>
+		</Directory>
+	</Fragment>
+
+	<Fragment>
+		<ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
+      <Component Id='Richsoft.SynchronisationService' Guid='69bc0819-fcde-44cd-93f8-0190ba6be495'>
+        <File Id='SynchronisationService.exe' Name='SynchronisationService.exe' Source='..\SynchronisationService\bin\Release\SynchronisationService.exe' DiskId='1' KeyPath='yes' />
+        <File Id='SynchronisationService.exe.config' Name='SynchronisationService.exe.config' Source='..\SynchronisationService\bin\Release\SynchronisationService.exe.config' DiskId='1' KeyPath='no' />
+        <ServiceInstall Id="ServiceInstaller" Type="ownProcess" Name="SynchronisationService" DisplayName="SynchronisationService"
+          Description="Synchronises client/server files." Start="auto" Account="LocalSystem" ErrorControl="normal">
+        </ServiceInstall>
+        <ServiceControl Id="StartService" Stop="both" Remove="uninstall" Name="SynchronisationService" Wait="yes" />
+        <Util:EventSource
+          xmlns:Util="http://schemas.microsoft.com/wix/UtilExtension"
+          Name="SynchronisationService"
+          Log="SynchronisationService"
+          EventMessageFile="%SystemRoot%\Microsoft.NET\Framework\v2.0.50727\EventLogMessages.dll"
+        />
+            <!--Log="Application"-->
+      </Component>
+      <Component Id='Richsoft.WrapperLibrary' Guid='405d35f6-8338-4d22-a0cf-2f34195330aa'>
+        <File Id='WrapperLibrary.dll' Name='WrapperLibrary.dll' DiskId='1' Source='..\WrapperLibrary\bin\Release\WrapperLibrary.dll' KeyPath='yes' />
+      </Component>
+      <Component Id='Richsoft.SynchronisationLibrary' Guid='30ba5bae-bb9d-43fb-9f48-7fd9ca63b32c'>
+        <File Id='SynchronisationLibrary.dll' Name='SynchronisationLibrary.dll' DiskId='1' Source='..\SynchronisationLibrary\bin\Release\SynchronisationLibrary.dll' KeyPath='yes' />
+      </Component>
+		</ComponentGroup>
+	</Fragment>
+</Wix>
