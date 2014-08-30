@@ -2,7 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using WrapperLibrary;
+//using WrapperLibrary;
+using System.IO.Abstractions;
+using System.IO;
 
 namespace SynchronisationLibrary
 {
@@ -17,7 +19,7 @@ namespace SynchronisationLibrary
             public List<string> MatchedFiles = new List<string>();
             public List<string> DeletedEntries = new List<string>(); // NB can include both files and directories. Cleaned?
             public Dictionary<string, Exception> FailedEntries = new Dictionary<string, Exception>(); // NB can include both files and directories.
-            public Dictionary<string, Result> SubDirectoryResults = new Dictionary<string, Result>();
+            public Dictionary<string, Result> DirectoryResults = new Dictionary<string, Result>();
         }
         
         public class DirectoryCleanedEventArgs : EntryEventArgs
@@ -76,88 +78,98 @@ namespace SynchronisationLibrary
         
         #region Methods
                         
-        public static Result Clean(IDirectory targetDirectory, IDirectory sourceDirectory, 
-            string targetFilePattern = null, FileAttributesWrapper targetFileAttributes = FileAttributesWrapper.Any)
+        public static Result Clean(IFileSystem fileSystem, string targetPath, string sourcePath, 
+            string pattern = null, FileAttributes attributes = FileAttributes.Normal)
         {
-            // If the source directory is null, throw an exception.
-            if (sourceDirectory == null)
+            // If the target path is null, throw an exception.
+            if (targetPath == null)
             {
-                throw new ArgumentNullException("sourceDirectory", "SourceDirectory null.");
+                throw new ArgumentNullException("targetPath", "TargetPath null.");
             }
 
-            // If the target directory is null, throw an exception.
-            if (targetDirectory == null)
+            // If the source path is null, throw an exception.
+            if (sourcePath == null)
             {
-                throw new ArgumentNullException("targetDirectory", "TargetDirectory null.");
+                throw new ArgumentNullException("sourcePath", "SourcePath null.");
             }
             
-            // If the source directory doesn't exist, throw an exception.
-            if (!sourceDirectory.Exists())
+            // If the target directory doesn't exist, throw an exception.
+            if (!fileSystem.Directory.Exists(targetPath))
             {
-                throw new SyncDirectoryNotFoundException(sourceDirectory.Path);
+                throw new SyncDirectoryNotFoundException(targetPath);
             }
 
-            // If the target directory doesn't exist, throw an exception.
-            if (!targetDirectory.Exists())
+            // If the source directory doesn't exist, throw an exception.
+            if (!fileSystem.Directory.Exists(sourcePath))
             {
-                throw new SyncDirectoryNotFoundException(targetDirectory.Path);
+                throw new SyncDirectoryNotFoundException(sourcePath);
             }
 
             Result result = new Result();
-            IEnumerable<string> sourceFileNames = sourceDirectory.GetFiles().Select<IFile, string>(f => f.Name); 
-            IEnumerable<string> sourceSubDirectoryNames = sourceDirectory.GetDirectories().Select<IDirectory, string>(d => d.Name);
+            IEnumerable<string> sourceFilePaths = fileSystem.Directory.GetFiles(sourcePath); 
+            IEnumerable<string> sourceDirectoryPaths = fileSystem.Directory.GetDirectories(sourcePath);
            
             // Loop through each file in the target directory.
-            foreach (IFile targetFile in targetDirectory.GetFiles(targetFilePattern, targetFileAttributes))
+            foreach (string targetFilePath in fileSystem.Directory.GetFiles(targetPath, pattern))
             {
-                // If it matches a file in the source directory, skip it.
-                if (sourceFileNames.Contains(targetFile.Name))
+                FileInfoBase targetFileInfo = fileSystem.FileInfo.FromFileName(targetFilePath);
+                if ((targetFileInfo.Attributes & attributes) != attributes)
                 {
-                    result.MatchedFiles.Add(targetFile.Name);
-                    RaiseEntryEvent(FileMatched, targetFile.Path);
+                    continue;
+                }
+
+                // If it matches a file in the source directory, skip it.
+                string sourceFilePath = Path.Combine(sourcePath, targetFileInfo.Name);//use FullName?? check if Name includes Extension
+                if (fileSystem.File.Exists(sourceFilePath))
+                {
+                    result.MatchedFiles.Add(targetFileInfo.Name);
+                    RaiseEntryEvent(FileMatched, targetFilePath);
                     continue;
                 }
                 // Otherwise, try to delete it.
                 try
                 {
-                    targetFile.Delete();
-                    RaiseEntryEvent(EntryDeleted, targetFile.Path);
-                    result.DeletedEntries.Add(targetFile.Name);
+                    targetFileInfo.Delete();
+                    RaiseEntryEvent(EntryDeleted, targetFilePath);
+                    result.DeletedEntries.Add(targetFileInfo.Name);
                 }
                 catch (Exception ex)
                 {
-                    RaiseErrorEvent(targetFile.Path, ex);
-                    result.FailedEntries.Add(targetFile.Name, ex);
+                    RaiseErrorEvent(targetFilePath, ex);
+                    result.FailedEntries.Add(targetFileInfo.Name, ex);
                 }
             }
 
             // Loop through each sub-directory in the target directory.
-            foreach (IDirectory targetSubDirectory in targetDirectory.GetDirectories())
+            foreach (string targetDirectoryPath in fileSystem.Directory.GetDirectories(targetPath))
             {
                 // If it matches a subdirectory in the source, clean it as well.
-                if (sourceSubDirectoryNames.Contains(targetSubDirectory.Name))
+                DirectoryInfoBase targetDirectoryInfo = fileSystem.DirectoryInfo.FromDirectoryName(targetDirectoryPath);        
+                string sourceDirectoryPath = Path.Combine(sourcePath, targetDirectoryInfo.Name);
+                
+
+                if (fileSystem.Directory.Exists(sourceDirectoryPath))
                 {
-                    IDirectory sourceSubDirectory = sourceDirectory.GetDirectories().First(d => d.Name == targetSubDirectory.Name);
-                    Result subDirectoryResult = Clean(targetSubDirectory, sourceSubDirectory, targetFilePattern);
-                    result.SubDirectoryResults.Add(targetSubDirectory.Name, subDirectoryResult);
+                    Result subDirectoryResult = Clean(fileSystem, targetDirectoryPath, sourceDirectoryPath, pattern, attributes);
+                    result.DirectoryResults.Add(targetDirectoryInfo.Name, subDirectoryResult);
                     continue;
                 }
                 // Otherwise, try to delete it.
                 try
                 {
-                    targetSubDirectory.Delete();
-                    RaiseEntryEvent(EntryDeleted, targetSubDirectory.Path);
-                    result.DeletedEntries.Add(targetSubDirectory.Name);
+                    targetDirectoryInfo.Delete();
+                    RaiseEntryEvent(EntryDeleted, targetDirectoryPath);
+                    result.DeletedEntries.Add(targetDirectoryInfo.Name);
                 }
                 catch (Exception ex)
                 {
-                    RaiseErrorEvent(targetSubDirectory.Path, ex);
-                    result.FailedEntries.Add(targetSubDirectory.Name, ex);
+                    RaiseErrorEvent(targetDirectoryPath, ex);
+                    result.FailedEntries.Add(targetDirectoryInfo.Name, ex);
                 }
             }
 
             // Flag up the clean.
-            RaiseDirectoryCleanedEvent(targetDirectory.Path, result);
+            RaiseDirectoryCleanedEvent(targetPath, result);
             return result;
         }
         

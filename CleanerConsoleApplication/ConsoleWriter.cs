@@ -51,7 +51,7 @@ namespace CleanerConsoleApplication
             //include subfolders in with matched?
             WriteInformation(String.Format(
                 "Directory cleaned. Path: \"{0}\". Entry summary: {1} matched, {2} deleted, {3} failed.", 
-                e.Path, e.Result.MatchedFiles.Count + e.Result.SubDirectoryResults.Count, 
+                e.Path, e.Result.MatchedFiles.Count + e.Result.DirectoryResults.Count, 
                 e.Result.DeletedEntries.Count, e.Result.FailedEntries.Count));
         }
     
