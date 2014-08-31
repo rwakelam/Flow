@@ -87,7 +87,7 @@ namespace SynchronisationTest
                 Cleaner.Clean(fileSystem, @"C:\Target", @"C:\Source");
                 Assert.Fail("Exception not raised.");
             }
-            catch (SyncDirectoryNotFoundException)
+            catch (SyncDirectoryNotFoundException)//TODO:: replace with straight System.IO.Exception?
             { }
             catch
             {
@@ -107,66 +107,52 @@ namespace SynchronisationTest
             // Run the test.
             Cleaner.Result result = Cleaner.Clean(fileSystem, @"C:\Target", @"C:\Source", "*.txt");
 
-            // Check the results
-            Assert.IsNotNull(result);
-            Assert.IsNotNull(result.DeletedEntries);
-            Assert.AreEqual(1, result.DeletedEntries.Count);
-            Assert.AreEqual("File.txt", result.DeletedEntries[0]);
-            Assert.IsNotNull(result.MatchedFiles);
-            Assert.AreEqual(0, result.MatchedFiles.Count);
-            Assert.IsNotNull(result.DirectoryResults);
-            Assert.AreEqual(0, result.DirectoryResults.Count);
+            // Check the clean has worked properly.
+            Assert.IsFalse(fileSystem.File.Exists(@"C:\Target\File.txt"));
+            Assert.IsTrue(fileSystem.File.Exists(@"C:\Target\File.doc"));
         }
 
-       // //[TestMethod]
-       // public void TestCleanByAttributes()
-       // {
-       //     // Prepare the source and target directories and files.
-       //     IDirectory sourceDirectory = Common.CreateDirectory(Common.SourceDirectoryPath);
-       //     IDirectory targetDirectory = Common.CreateDirectory(Common.TargetDirectoryPath);
-       //     IFile targetFile1 = Common.CreateFile("File1.txt", Common.TargetDirectoryPath, new byte[] { 65 }, FileAttributesWrapper.Normal);
-       //     IFile targetFile2 = Common.CreateFile("File2.txt", Common.TargetDirectoryPath, new byte[] { 65 }, FileAttributesWrapper.Hidden);
+        [TestMethod]
+        public void TestCleanByAttributes()
+        {
+            // Prepare the source and target directories and files.
+            var fileSystem = new System.IO.Abstractions.TestingHelpers.MockFileSystem();
+            fileSystem.AddDirectory(@"C:\Source");
+            fileSystem.AddFile(@"C:\Target\File1.txt", new MockFileData("Data"));
+            fileSystem.AddFile(@"C:\Target\File2.txt", new MockFileData("Data"));
+            fileSystem.File.SetAttributes(@"C:\Target\File1.txt", FileAttributes.Normal);
+            fileSystem.File.SetAttributes(@"C:\Target\File2.txt", FileAttributes.Hidden);
 
-       //     // Run the test.
-       //     Cleaner.Result result = Cleaner.Clean(targetDirectory, sourceDirectory, "*.*", FileAttributesWrapper.Normal);
+            // Run the test.
+            Cleaner.Result result = Cleaner.Clean(fileSystem, @"C:\Target", @"C:\Source", "*.*", FileAttributes.Normal);
 
-       //     // Check the results
-       //     Assert.IsNotNull(result);
-       //     Assert.IsNotNull(result.DeletedEntries);
-       //     Assert.AreEqual(1, result.DeletedEntries.Count);
-       //     Assert.AreEqual(targetFile1.Name, result.DeletedEntries[0]);
-       //     Assert.IsNotNull(result.MatchedFiles);
-       //     Assert.AreEqual(0, result.MatchedFiles.Count);
-       //     Assert.IsNotNull(result.SubDirectoryResults);
-       //     Assert.AreEqual(0, result.SubDirectoryResults.Count);
-       // }
+            // Check the results
+            Assert.IsFalse(fileSystem.File.Exists(@"C:\Target\File1.txt"));
+            Assert.IsTrue(fileSystem.File.Exists(@"C:\Target\File2.txt"));
+        }
+        
+        [TestMethod]
+        public void TestCleanByPatternAndAttributes()
+        {
+            // Prepare the source and target directories and files.
+            var fileSystem = new System.IO.Abstractions.TestingHelpers.MockFileSystem();
+            fileSystem.AddDirectory(@"C:\Source");
+            fileSystem.AddFile(@"C:\Target\File1.txt", new MockFileData("Data"));
+            fileSystem.AddFile(@"C:\Target\File2.doc", new MockFileData("Data"));
+            fileSystem.AddFile(@"C:\Target\File3.txt", new MockFileData("Data"));
+            fileSystem.File.SetAttributes(@"C:\Target\File1.txt", FileAttributes.Normal);
+            fileSystem.File.SetAttributes(@"C:\Target\File2.doc", FileAttributes.Normal);
+            fileSystem.File.SetAttributes(@"C:\Target\File3.txt", FileAttributes.Hidden);
 
-       // //[TestMethod]
-       // public void TestCleanByPatternAndAttributes()
-       // {
-       //     // Prepare the source and target directories and files.
-       //     IDirectory sourceDirectory = Common.CreateDirectory(Common.SourceDirectoryPath);
-       //     IDirectory targetDirectory = Common.CreateDirectory(Common.TargetDirectoryPath);
-       //     IFile targetFile1 = Common.CreateFile("File1.txt", Common.TargetDirectoryPath, new byte[] { 65 }, 
-       //         FileAttributesWrapper.Hidden);
-       //     IFile targetFile2 = Common.CreateFile("File2.doc", Common.TargetDirectoryPath, new byte[] { 65 }, 
-       //         FileAttributesWrapper.Hidden);
-       //     IFile targetFile3 = Common.CreateFile("File3.txt", Common.TargetDirectoryPath, new byte[] { 65 });
+            // Run the test.
+            Cleaner.Result result = Cleaner.Clean(fileSystem, @"C:\Target", @"C:\Source", "*.txt", FileAttributes.Normal);
 
-       //     // Run the test.
-       //     Cleaner.Result result = Cleaner.Clean(targetDirectory, sourceDirectory, "*.txt", FileAttributesWrapper.Hidden);
-
-       //     // Check the results
-       //     Assert.IsNotNull(result);
-       //     Assert.IsNotNull(result.DeletedEntries);
-       //     Assert.AreEqual(1, result.DeletedEntries.Count);
-       //     Assert.AreEqual(targetFile1.Name, result.DeletedEntries[0]);
-       //     Assert.IsNotNull(result.MatchedFiles);
-       //     Assert.AreEqual(0, result.MatchedFiles.Count);
-       //     Assert.IsNotNull(result.SubDirectoryResults);
-       //     Assert.AreEqual(0, result.SubDirectoryResults.Count);
-       // }
-   
+            // Check the results
+            Assert.IsFalse(fileSystem.File.Exists(@"C:\Target\File1.txt"));
+            Assert.IsTrue(fileSystem.File.Exists(@"C:\Target\File2.doc"));
+            Assert.IsTrue(fileSystem.File.Exists(@"C:\Target\File3.txt"));
+        }
+           
        // //[TestMethod]
        // public void TestClean()//TODO:: make recursive?
        // {
@@ -216,5 +202,20 @@ namespace SynchronisationTest
        //     Assert.AreEqual(1, result.SubDirectoryResults.Count);
        //     Assert.AreEqual(Common.SubDirectoryName, result.SubDirectoryResults.Keys.First());
        // }
+
+        //[TestMethod]
+        public void TestCleanResults()
+        {
+         
+            //Assert.IsNotNull(result);
+            //Assert.IsNotNull(result.DeletedEntries);
+            //Assert.AreEqual(1, result.DeletedEntries.Count);
+            //Assert.AreEqual(targetFile1.Name, result.DeletedEntries[0]);
+            //Assert.IsNotNull(result.MatchedFiles);
+            //Assert.AreEqual(0, result.MatchedFiles.Count);
+            //Assert.IsNotNull(result.SubDirectoryResults);
+            //Assert.AreEqual(0, result.SubDirectoryResults.Count);
+         }
+
     }
 }
