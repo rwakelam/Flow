@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using SynchronisationLibrary;
-//using WrapperLibrary;
 using System.IO.Abstractions;
 using System.IO.Abstractions.TestingHelpers;
 
@@ -105,7 +104,7 @@ namespace SynchronisationTest
             fileSystem.AddFile(@"C:\Target\File.doc", new MockFileData("Data"));
             
             // Run the test.
-            Cleaner.Result result = Cleaner.Clean(fileSystem, @"C:\Target", @"C:\Source", "*.txt");
+            Cleaner.CleanResult result = Cleaner.Clean(fileSystem, @"C:\Target", @"C:\Source", "*.txt");
 
             // Check the clean has worked properly.
             Assert.IsFalse(fileSystem.File.Exists(@"C:\Target\File.txt"));
@@ -124,7 +123,7 @@ namespace SynchronisationTest
             fileSystem.File.SetAttributes(@"C:\Target\File2.txt", FileAttributes.Hidden);
 
             // Run the test.
-            Cleaner.Result result = Cleaner.Clean(fileSystem, @"C:\Target", @"C:\Source", "*.*", FileAttributes.Normal);
+            Cleaner.CleanResult result = Cleaner.Clean(fileSystem, @"C:\Target", @"C:\Source", "*.*", FileAttributes.Normal);
 
             // Check the results
             Assert.IsFalse(fileSystem.File.Exists(@"C:\Target\File1.txt"));
@@ -145,76 +144,51 @@ namespace SynchronisationTest
             fileSystem.File.SetAttributes(@"C:\Target\File3.txt", FileAttributes.Hidden);
 
             // Run the test.
-            Cleaner.Result result = Cleaner.Clean(fileSystem, @"C:\Target", @"C:\Source", "*.txt", FileAttributes.Normal);
+            Cleaner.CleanResult result = Cleaner.Clean(fileSystem, @"C:\Target", @"C:\Source", "*.txt", FileAttributes.Normal);
 
             // Check the results
             Assert.IsFalse(fileSystem.File.Exists(@"C:\Target\File1.txt"));
             Assert.IsTrue(fileSystem.File.Exists(@"C:\Target\File2.doc"));
             Assert.IsTrue(fileSystem.File.Exists(@"C:\Target\File3.txt"));
         }
-           
-       // //[TestMethod]
-       // public void TestClean()//TODO:: make recursive?
-       // {
-       //     // Prepare the source and target directories and files.
-       //     IDirectory sourceDirectory = Common.CreateDirectory(Common.SourceDirectoryPath);
-       //     IDirectory targetDirectory = Common.CreateDirectory(Common.TargetDirectoryPath);
-       //     IFile matchedSourceFile = Common.CreateFile("MatchedFile.txt", Common.SourceDirectoryPath, new byte[] { 65 });
-       //     IFile matchedTargetFile = Common.CreateFile("MatchedFile.txt", Common.TargetDirectoryPath, new byte[] { 65 });
-       //     IFile unmatchedTargetFile = Common.CreateFile("UnmatchedFile.txt", Common.TargetDirectoryPath, new byte[] { 65 });
-       //     IDirectory unmatchedTargetSubDirectory = Common.CreateDirectory(Common.TargetSubDirectoryPath);
 
-       //     // Run the test.
-       //     Cleaner.Result result = Cleaner.Clean(targetDirectory, sourceDirectory);
-
-       //     // Check the results
-       //     Assert.IsNotNull(result);
-       //     Assert.IsNotNull(result.DeletedEntries);
-       //     Assert.AreEqual(2, result.DeletedEntries.Count);
-       //     Assert.IsTrue(result.DeletedEntries.Contains(unmatchedTargetFile.Name));
-       //     Assert.IsTrue(result.DeletedEntries.Contains(unmatchedTargetSubDirectory.Name));
-       //     Assert.IsNotNull(result.MatchedFiles);
-       //     Assert.AreEqual(1, result.MatchedFiles.Count);
-       //     Assert.AreEqual(matchedTargetFile.Name, result.MatchedFiles[0]);
-       //     Assert.IsNotNull(result.SubDirectoryResults);
-       //     Assert.AreEqual(0, result.SubDirectoryResults.Count);
-       // }  
-
-       // //[TestMethod]
-       // public void TestCleanWhenSubDirectoriesMatch()
-       // {
-       //     // Prepare the source and target directories and files.
-       //     IDirectory sourceDirectory = Common.CreateDirectory(Common.SourceDirectoryPath);
-       //     IDirectory targetDirectory = Common.CreateDirectory(Common.TargetDirectoryPath);
-       //     IDirectory sourceSubDirectory = Common.CreateDirectory(Common.SourceSubDirectoryPath);
-       //     IDirectory targetSubDirectory = Common.CreateDirectory(Common.TargetSubDirectoryPath);
-
-       //     // Run the test.
-       //     Cleaner.Result result = Cleaner.Clean(targetDirectory, sourceDirectory);
-
-       //     // Check the results
-       //     Assert.IsNotNull(result);
-       //     Assert.IsNotNull(result.DeletedEntries);
-       //     Assert.AreEqual(0, result.DeletedEntries.Count);
-       //     Assert.IsNotNull(result.MatchedFiles);
-       //     Assert.AreEqual(0, result.MatchedFiles.Count);
-       //     Assert.IsNotNull(result.SubDirectoryResults);
-       //     Assert.AreEqual(1, result.SubDirectoryResults.Count);
-       //     Assert.AreEqual(Common.SubDirectoryName, result.SubDirectoryResults.Keys.First());
-       // }
-
-        //[TestMethod]
-        public void TestCleanResults()
+        [TestMethod]
+        public void TestCleanRecursive()
         {
-         
-            //Assert.IsNotNull(result);
-            //Assert.IsNotNull(result.DeletedEntries);
-            //Assert.AreEqual(1, result.DeletedEntries.Count);
-            //Assert.AreEqual(targetFile1.Name, result.DeletedEntries[0]);
-            //Assert.IsNotNull(result.MatchedFiles);
-            //Assert.AreEqual(0, result.MatchedFiles.Count);
-            //Assert.IsNotNull(result.SubDirectoryResults);
-            //Assert.AreEqual(0, result.SubDirectoryResults.Count);
+            // Prepare the source and target directories and files.
+            var fileSystem = new System.IO.Abstractions.TestingHelpers.MockFileSystem();
+            fileSystem.AddDirectory(@"C:\Source\SubDirectory");
+            fileSystem.AddFile(@"C:\Target\SubDirectory\File.txt", new MockFileData("Data"));
+
+            // Run the test.
+            Cleaner.CleanResult result = Cleaner.Clean(fileSystem, @"C:\Target", @"C:\Source");
+
+            // Check the results
+            Assert.IsFalse(fileSystem.File.Exists(@"C:\Target\SubDirectory\File.txt"));
+        }
+
+        [TestMethod]              
+        public void TestCleanResult()
+        {
+            // Prepare the source and target directories and files.
+            var fileSystem = new System.IO.Abstractions.TestingHelpers.MockFileSystem();
+            fileSystem.AddFile(@"C:\Source\File1.txt", new MockFileData("Data"));
+            fileSystem.AddFile(@"C:\Target\File1.txt", new MockFileData("Data"));
+            fileSystem.AddFile(@"C:\Target\File2.txt", new MockFileData("Data"));
+            fileSystem.AddDirectory(@"C:\Source\SubDirectory");
+            fileSystem.AddDirectory(@"C:\Target\SubDirectory");
+
+            // Run the test.
+            Cleaner.CleanResult result = Cleaner.Clean(fileSystem, @"C:\Target", @"C:\Source");
+
+            // Check the result.
+            Assert.AreEqual(1, result.MatchedFiles.Count);
+            Assert.AreEqual("File1.txt", result.MatchedFiles[0]);
+            Assert.AreEqual(1, result.DeletedEntries.Count);
+            Assert.AreEqual("File2.txt", result.DeletedEntries[0]);
+            Assert.AreEqual(0, result.FailedEntries.Count);
+            // TODO:: figure out how to spoof a fail an entry?
+            Assert.AreEqual(1, result.DirectoryResults.Count);
          }
 
     }

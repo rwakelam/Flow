@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO.Abstractions;
+using System.IO;
 using System.Linq;
 using System.Text;
-using WrapperLibrary;
+//using WrapperLibrary;
 
 namespace SynchronisationLibrary
 {
@@ -10,7 +12,7 @@ namespace SynchronisationLibrary
     {
         #region Enumerators
 
-        public enum EntryResult
+        public enum PushEntryResult
         {
             Verified,
             Created,
@@ -22,27 +24,27 @@ namespace SynchronisationLibrary
 
         #region Classes
 
-        public class DirectoryResult
+        public class PushDirectoryResult
         {
-            public EntryResult Result;
+            public PushEntryResult Result;
             public List<string> CreatedFiles = new List<string>();
             public List<string> UpdatedFiles = new List<string>();
             public List<string> VerifiedFiles = new List<string>(); 
             public Dictionary<string, Exception> FailedEntries = new Dictionary<string, Exception>(); // NB can include both files and directories.
-            public Dictionary<string, DirectoryResult> SubDirectoryResults = new Dictionary<string, DirectoryResult>();             
+            public Dictionary<string, PushDirectoryResult> DirectoryResults = new Dictionary<string, PushDirectoryResult>();             
         }
 
         public class DirectoryPushedEventArgs : EntryEventArgs
         {
             #region Fields
 
-            private DirectoryResult _result;
+            private PushDirectoryResult _result;
 
             #endregion
 
             #region Properties
 
-            public DirectoryResult Result
+            public PushDirectoryResult Result
             {
                 get
                 {
@@ -62,7 +64,7 @@ namespace SynchronisationLibrary
 
             #region Methods
 
-            public DirectoryPushedEventArgs(string path, DirectoryResult result)
+            public DirectoryPushedEventArgs(string path, PushDirectoryResult result)
                 : base(path)
             {
                 Result = result;
@@ -103,138 +105,153 @@ namespace SynchronisationLibrary
         // add separte method for top level call
         // and make recursive one private, so that different rules can apply
         // does this method need top level error handling?
-        public static DirectoryResult Push(IDirectory sourceDirectory, IDirectory targetDirectory, 
-            string sourceFilePattern = null, FileAttributesWrapper sourceFileAttributes = FileAttributesWrapper.Any)
+        public static PushDirectoryResult Push(IFileSystem fileSystem, string sourcePath, string targetPath, 
+            string pattern = "*.*", FileAttributes attributes = FileAttributes.Normal)
         {
             // If the source directory is null, throw an exception.
-            if (sourceDirectory == null)
+            if (sourcePath == null)
             {
-                throw new ArgumentNullException("sourceDirectory", "SourceDirectory null.");
+                throw new ArgumentNullException("sourcePath", "SourcePath null.");
             }
             // If the target directory is null, throw an exception.
-            if (targetDirectory == null)
+            if (targetPath == null)
             {
-                throw new ArgumentNullException("targetDirectory", "TargetDirectory null.");
+                throw new ArgumentNullException("targetPath", "TargetPath null.");
             }
             // If the source directory doesn't exist, throw an exception.
-            if (!sourceDirectory.Exists())
+            if (!fileSystem.Directory.Exists(sourcePath))
             {
-                throw new SyncDirectoryNotFoundException(sourceDirectory.Path);
+                throw new SyncDirectoryNotFoundException(sourcePath);
             }
-          
-            DirectoryResult result = new DirectoryResult();
+            var sourceInfo = fileSystem.DirectoryInfo.FromDirectoryName(sourcePath);
+            DirectoryInfoBase targetInfo;
+            PushDirectoryResult result = new PushDirectoryResult();
 
             // If the target directory doesn't exist, try to create it now.
-            if (!targetDirectory.Exists())
+            if (!fileSystem.Directory.Exists(targetPath))
             {
-                targetDirectory.Create();//raise directory created event?
-                targetDirectory.Attributes = sourceDirectory.Attributes;
-                result.Result = EntryResult.Created;
-                RaiseEntryEvent(DirectoryCreated, targetDirectory.Path);
-            }
-            // If the target's attributes are different, update them now.
-            else if (targetDirectory.Attributes != sourceDirectory.Attributes)
-            {
-                targetDirectory.Attributes = sourceDirectory.Attributes;
-                result.Result = EntryResult.Updated;
-                RaiseEntryEvent(DirectoryUpdated, targetDirectory.Path);
+                targetInfo = fileSystem.Directory.CreateDirectory(targetPath);
+                targetInfo.Attributes = sourceInfo.Attributes;
+                result.Result = PushEntryResult.Created;
+                RaiseEntryEvent(DirectoryCreated, targetPath);
             }
             
-            // Loop through each file in the source directory.
-            foreach (IFile sourceFile in sourceDirectory.GetFiles(sourceFilePattern, sourceFileAttributes))
+            // If the target's attributes are different, update them now.
+            else
             {
-                IFile targetFile = targetDirectory.GetFile(sourceFile.Name);
+                targetInfo = fileSystem.DirectoryInfo.FromDirectoryName(targetPath);
+                if (targetInfo.Attributes != sourceInfo.Attributes)
+                {
+                    targetInfo.Attributes = sourceInfo.Attributes;
+                    result.Result = PushEntryResult.Updated;
+                    RaiseEntryEvent(DirectoryUpdated, targetPath);
+                }
+            }     
+            
+            // Loop through each file in the source directory.
+            foreach (string sourceFilePath in fileSystem.Directory.GetFiles(sourcePath, pattern))//, attributes))
+            {
+                // If the source file doesn't have the required attributes, skip it.
+                var sourceFileInfo = fileSystem.FileInfo.FromFileName(sourceFilePath);
+                if ((sourceFileInfo.Attributes & attributes) != attributes)
+                {
+                    continue;
+                }
+
+                string targetFilePath = Path.Combine(targetPath, sourceFileInfo.Name);
                 try
                 {
-                    switch (Push(sourceFile, targetFile))
+                    switch (PushFile(fileSystem, sourceFilePath, targetFilePath))
                     {
-                        case EntryResult.Created:
-                            result.CreatedFiles.Add(targetFile.Name);
-                            RaiseEntryEvent(FileCreated, targetFile.Path);
+                        case PushEntryResult.Created:
+                            result.CreatedFiles.Add(sourceFileInfo.Name);
+                            RaiseEntryEvent(FileCreated, targetFilePath);
                             break;
-                        case EntryResult.Updated:
-                            result.UpdatedFiles.Add(targetFile.Name);
-                            RaiseEntryEvent(FileUpdated, targetFile.Path);
+                        case PushEntryResult.Updated:
+                            result.UpdatedFiles.Add(sourceFileInfo.Name);
+                            RaiseEntryEvent(FileUpdated, targetFilePath);
                             break;
-                        case EntryResult.Verified:
-                            result.VerifiedFiles.Add(targetFile.Name);
-                            RaiseEntryEvent(FileVerified, targetFile.Path);
+                        case PushEntryResult.Verified:
+                            result.VerifiedFiles.Add(sourceFileInfo.Name);
+                            RaiseEntryEvent(FileVerified, targetFilePath);
                             break;
                     }
                 }
                 catch (Exception ex)
                 {
-                    result.FailedEntries.Add(targetFile.Name, ex);
-                    RaiseErrorEvent(targetFile.Path, ex);
+                    result.FailedEntries.Add(sourceFileInfo.Name, ex);
+                    RaiseErrorEvent(targetFilePath, ex);
                 }
             }        
                 
             // Loop through each sub-directory in the source directory.
-            foreach (IDirectory sourceSubDirectory in sourceDirectory.GetDirectories())
+            foreach (string sourceDirectoryPath in fileSystem.Directory.GetDirectories(sourcePath))
             {
-                IDirectory targetSubDirectory = targetDirectory.GetSubDirectory(sourceSubDirectory.Name);
+                var sourceDirectory = fileSystem.DirectoryInfo.FromDirectoryName(sourceDirectoryPath);
+                string targetDirectoryPath = Path.Combine(targetPath, sourceDirectory.Name);
                 try
                 {
                     // I don't want the failure of one sub directory to kncker up all the others
-                    DirectoryResult subDirectoryResult = 
-                        Push(sourceSubDirectory, targetSubDirectory, sourceFilePattern, sourceFileAttributes);
-                    result.SubDirectoryResults.Add(targetSubDirectory.Name, subDirectoryResult);
+                    PushDirectoryResult subDirectoryResult = 
+                        Push(fileSystem, sourceDirectoryPath, targetDirectoryPath, pattern, attributes);
+                    result.DirectoryResults.Add(sourceDirectory.Name, subDirectoryResult);
                 }
                 catch (Exception ex)
                 {
-                    RaiseErrorEvent(targetSubDirectory.Path, ex);
-                    result.FailedEntries.Add(targetSubDirectory.Name, ex);
+                    RaiseErrorEvent(targetDirectoryPath, ex);
+                    result.FailedEntries.Add(sourceDirectory.Name, ex);
                 }              
             }
 
             // Flag up the push.
-            RaiseDirectorySynchronisedEvent(targetDirectory.Path, result);
+            RaiseDirectorySynchronisedEvent(targetPath, result);
             return result;
         }
 
-        public static EntryResult Push(IFile sourceFile, IFile targetFile) 
+        private static PushEntryResult PushFile(IFileSystem fileSystem, string sourcePath, string targetPath) 
         {
             // If the source file is null, throw an exception.
-            if (sourceFile == null) 
+            if (sourcePath == null) 
             {
-                throw new ArgumentNullException("sourceFile", "SourceFile null.");
+                throw new ArgumentNullException("sourcePath", "SourcePath null.");
             }
             // If the target file is null, throw an exception.
-            if (targetFile == null)
+            if (targetPath == null)
             {
-                throw new ArgumentNullException("targetFile", "TargetFile null.");
+                throw new ArgumentNullException("targetPath", "TargetPath null.");
             }            
             // If the source file doesn't exist, throw an exception.
-            if (!sourceFile.Exists())
+            if (!fileSystem.File.Exists(sourcePath))
             {
-                throw new SyncFileNotFoundException(sourceFile.Path);
+                throw new SyncFileNotFoundException(sourcePath);
             }
                         
             // If the target doesn't exist, try to create it now.
-            if (!targetFile.Exists()) 
+            var sourceInfo = fileSystem.FileInfo.FromFileName(sourcePath);
+            if (!fileSystem.File.Exists(targetPath)) 
             {
-                targetFile.WriteAllBytes(sourceFile.ReadAllBytes());
-                targetFile.Attributes = sourceFile.Attributes;
-                return EntryResult.Created;
+                fileSystem.File.Copy(sourcePath, targetPath);
+                fileSystem.File.SetAttributes(targetPath, sourceInfo.Attributes);
+                return PushEntryResult.Created;
             }
+            var targetInfo = fileSystem.FileInfo.FromFileName(targetPath);
             
             // If the target is identical to the source, mark it as verified.
-            if (BytesEqual(sourceFile, targetFile)) 
+            if (BytesEqual(sourceInfo, targetInfo)) 
             {
-                if (targetFile.Attributes == sourceFile.Attributes) 
+                if (targetInfo.Attributes == sourceInfo.Attributes) 
                 { 
-                    return EntryResult.Verified;                
+                    return PushEntryResult.Verified;                
                 }
-                targetFile.Attributes = sourceFile.Attributes;
-                return EntryResult.Updated;          
+                targetInfo.Attributes = sourceInfo.Attributes;
+                return PushEntryResult.Updated;          
             }
-            targetFile.Delete();
-            targetFile.WriteAllBytes(sourceFile.ReadAllBytes());
-            targetFile.Attributes = sourceFile.Attributes;                        
-            return EntryResult.Updated;            
+            fileSystem.File.Copy(sourcePath, targetPath, true);
+            targetInfo.Attributes = sourceInfo.Attributes;                        
+            return PushEntryResult.Updated;            
         }
 
-        private static bool BytesEqual(IFile sourceFile, IFile targetFile)
+        private static bool BytesEqual(FileInfoBase sourceFile, FileInfoBase targetFile)
         {
             if (sourceFile.Length != targetFile.Length)
             {
@@ -242,15 +259,15 @@ namespace SynchronisationLibrary
             }
 
             int bufferCount = (int)Math.Ceiling((double)sourceFile.Length / BufferSize);
-            using (IFileReader sourceReader = sourceFile.GetReader())
-            using (IFileReader targetReader = targetFile.GetReader())
+            using (Stream sourceStream = sourceFile.OpenRead())
+            using (Stream targetStream = targetFile.OpenRead())
             {
                 byte[] sourceBuffer = new byte[BufferSize];
                 byte[] targetBuffer = new byte[BufferSize];
                 for (int i = 0; i < bufferCount; i++)
                 {
-                    sourceReader.Read(sourceBuffer, 0, BufferSize);
-                    targetReader.Read(targetBuffer, 0, BufferSize);
+                    sourceStream.Read(sourceBuffer, 0, BufferSize);
+                    targetStream.Read(targetBuffer, 0, BufferSize);
                     if (BitConverter.ToInt64(sourceBuffer, 0) != BitConverter.ToInt64(targetBuffer, 0))
                     {
                         return false;
@@ -282,7 +299,7 @@ namespace SynchronisationLibrary
             }
         }
 
-        private static void RaiseDirectorySynchronisedEvent(string path, DirectoryResult result)
+        private static void RaiseDirectorySynchronisedEvent(string path, PushDirectoryResult result)
         {
             DirectoryPushedEventHandler temp = DirectoryPushed;
             if (temp != null)

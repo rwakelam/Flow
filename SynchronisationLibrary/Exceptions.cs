@@ -1,21 +1,22 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 
 namespace SynchronisationLibrary
 {
-    public class SyncFileNotFoundException : Exception
+    public class SyncFileNotFoundException : FileNotFoundException
     {
         public SyncFileNotFoundException(string path)
-            : base(String.Format("Synchronisation file not found. Path: '{0}'.", path)) 
+            : base(String.Format("File not found. Path: '{0}'.", path)) 
         { }
     }
     
-    public class SyncDirectoryNotFoundException : Exception
+    public class SyncDirectoryNotFoundException : DirectoryNotFoundException
     {
         public SyncDirectoryNotFoundException(string path)
-            : base(String.Format("Synchronisation directory not found. Path: '{0}'.", path))
+            : base(String.Format("Directory not found. Path: '{0}'.", path))
         { }
     }
 }

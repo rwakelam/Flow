@@ -114,8 +114,8 @@ namespace SynchronisationTest
             IDirectory targetDirectory = Common.CreateDirectory(Common.TargetDirectoryPath);
             IFile sourceFile = Common.CreateFile("File.txt", Common.SourceDirectoryPath, new byte[] { 65 });
             IFile targetFile = Common.CreateFile("File.txt", Common.TargetDirectoryPath, new byte[] { 66 }); 
-            Pusher.EntryResult result = Pusher.Push(sourceFile, targetFile);
-            Assert.AreEqual(Pusher.EntryResult.Updated, result);
+            Pusher.PushEntryResult result = Pusher.Push(sourceFile, targetFile);
+            Assert.AreEqual(Pusher.PushEntryResult.Updated, result);
         }
 
         [TestMethod]
@@ -128,8 +128,8 @@ namespace SynchronisationTest
                 FileAttributesWrapper.Normal);
             IFile targetFile = Common.CreateFile("File.txt", Common.TargetDirectoryPath, new byte[] { 66 },
                 FileAttributesWrapper.Archive);
-            Pusher.EntryResult result = Pusher.Push(sourceFile, targetFile);
-            Assert.AreEqual(Pusher.EntryResult.Updated, result);
+            Pusher.PushEntryResult result = Pusher.Push(sourceFile, targetFile);
+            Assert.AreEqual(Pusher.PushEntryResult.Updated, result);
         }
 
         [TestMethod]
@@ -144,8 +144,8 @@ namespace SynchronisationTest
             {
                 targetFile.Delete();
             }
-            Pusher.EntryResult result = Pusher.Push(sourceFile, targetFile);
-            Assert.AreEqual(Pusher.EntryResult.Created, result);
+            Pusher.PushEntryResult result = Pusher.Push(sourceFile, targetFile);
+            Assert.AreEqual(Pusher.PushEntryResult.Created, result);
         }
 
         [TestMethod]
@@ -156,8 +156,8 @@ namespace SynchronisationTest
             IDirectory targetDirectory = Common.CreateDirectory(Common.TargetDirectoryPath);
             IFile sourceFile = Common.CreateFile("File.txt", Common.SourceDirectoryPath, new byte[] { 65 });
             IFile targetFile = Common.CreateFile("File.txt", Common.TargetDirectoryPath, new byte[] { 65 });
-            Pusher.EntryResult result = Pusher.Push(sourceFile, targetFile);
-            Assert.AreEqual(Pusher.EntryResult.Verified, result);
+            Pusher.PushEntryResult result = Pusher.Push(sourceFile, targetFile);
+            Assert.AreEqual(Pusher.PushEntryResult.Verified, result);
         }
 
         [TestMethod]
@@ -170,7 +170,7 @@ namespace SynchronisationTest
             IFile unsoughtFile = Common.CreateFile("File.doc", Common.SourceDirectoryPath, new byte[] { 65 });
 
             // Run the test.
-            Pusher.DirectoryResult result = Pusher.Push(sourceDirectory, targetDirectory, "*.txt");
+            Pusher.PushDirectoryResult result = Pusher.Push(sourceDirectory, targetDirectory, "*.txt");
 
             // Check the results
             Assert.IsNotNull(result);
@@ -183,8 +183,8 @@ namespace SynchronisationTest
             Assert.AreEqual(0, result.UpdatedFiles.Count);
             Assert.IsNotNull(result.VerifiedFiles);
             Assert.AreEqual(0, result.VerifiedFiles.Count);
-            Assert.IsNotNull(result.SubDirectoryResults);
-            Assert.AreEqual(0, result.SubDirectoryResults.Count);
+            Assert.IsNotNull(result.DirectoryResults);
+            Assert.AreEqual(0, result.DirectoryResults.Count);
         }
         
         [TestMethod]
@@ -199,7 +199,7 @@ namespace SynchronisationTest
                 FileAttributesWrapper.Hidden);
 
             // Run the test.
-            Pusher.DirectoryResult result = Pusher.Push(sourceDirectory, targetDirectory, null, 
+            Pusher.PushDirectoryResult result = Pusher.Push(sourceDirectory, targetDirectory, null, 
                 FileAttributesWrapper.Normal);
 
             // Check the results
@@ -213,8 +213,8 @@ namespace SynchronisationTest
             Assert.AreEqual(0, result.UpdatedFiles.Count);
             Assert.IsNotNull(result.VerifiedFiles);
             Assert.AreEqual(0, result.VerifiedFiles.Count);
-            Assert.IsNotNull(result.SubDirectoryResults);
-            Assert.AreEqual(0, result.SubDirectoryResults.Count);
+            Assert.IsNotNull(result.DirectoryResults);
+            Assert.AreEqual(0, result.DirectoryResults.Count);
         }
 
         [TestMethod]
@@ -228,7 +228,7 @@ namespace SynchronisationTest
             IFile unsoughtFile2 = Common.CreateFile("File2.txt", Common.SourceDirectoryPath, new byte[] { 65 }, FileAttributesWrapper.Normal);
 
             // Run the test.
-            Pusher.DirectoryResult result = Pusher.Push(sourceDirectory, targetDirectory, "*.txt", FileAttributesWrapper.Archive);
+            Pusher.PushDirectoryResult result = Pusher.Push(sourceDirectory, targetDirectory, "*.txt", FileAttributesWrapper.Archive);
 
             // Check the results
             Assert.IsNotNull(result);
@@ -241,8 +241,8 @@ namespace SynchronisationTest
             Assert.AreEqual(0, result.UpdatedFiles.Count);
             Assert.IsNotNull(result.VerifiedFiles);
             Assert.AreEqual(0, result.VerifiedFiles.Count);
-            Assert.IsNotNull(result.SubDirectoryResults);
-            Assert.AreEqual(0, result.SubDirectoryResults.Count);
+            Assert.IsNotNull(result.DirectoryResults);
+            Assert.AreEqual(0, result.DirectoryResults.Count);
         }
         
     }

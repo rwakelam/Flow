@@ -34,4 +34,5 @@ namespace SynchronisationLibrary
         File
     }
 
+    //public const string MatchAllPattern = "*.*";
 }

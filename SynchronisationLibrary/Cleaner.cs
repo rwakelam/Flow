@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-//using WrapperLibrary;
 using System.IO.Abstractions;
 using System.IO;
 
@@ -14,25 +13,25 @@ namespace SynchronisationLibrary
 
         #region Classes
 
-        public class Result
+        public class CleanResult
         {
             public List<string> MatchedFiles = new List<string>();
             public List<string> DeletedEntries = new List<string>(); // NB can include both files and directories. Cleaned?
             public Dictionary<string, Exception> FailedEntries = new Dictionary<string, Exception>(); // NB can include both files and directories.
-            public Dictionary<string, Result> DirectoryResults = new Dictionary<string, Result>();
+            public Dictionary<string, CleanResult> DirectoryResults = new Dictionary<string, CleanResult>();
         }
         
         public class DirectoryCleanedEventArgs : EntryEventArgs
         {
             #region Fields
 
-            private Result _result;
+            private CleanResult _result;
 
             #endregion
 
             #region Properties
 
-            public Result Result
+            public CleanResult Result
             {
                 get
                 {
@@ -52,7 +51,7 @@ namespace SynchronisationLibrary
 
             #region Methods
 
-            public DirectoryCleanedEventArgs(string path, Result result)
+            public DirectoryCleanedEventArgs(string path, CleanResult result)
                 : base(path)
             {
                 Result = result;
@@ -78,8 +77,8 @@ namespace SynchronisationLibrary
         
         #region Methods
                         
-        public static Result Clean(IFileSystem fileSystem, string targetPath, string sourcePath, 
-            string pattern = null, FileAttributes attributes = FileAttributes.Normal)
+        public static CleanResult Clean(IFileSystem fileSystem, string targetPath, string sourcePath, 
+            string pattern = "*.*", FileAttributes attributes = FileAttributes.Normal)
         {
             // If the target path is null, throw an exception.
             if (targetPath == null)
@@ -105,7 +104,7 @@ namespace SynchronisationLibrary
                 throw new SyncDirectoryNotFoundException(sourcePath);
             }
 
-            Result result = new Result();
+            CleanResult result = new CleanResult();
             IEnumerable<string> sourceFilePaths = fileSystem.Directory.GetFiles(sourcePath); 
             IEnumerable<string> sourceDirectoryPaths = fileSystem.Directory.GetDirectories(sourcePath);
            
@@ -146,11 +145,9 @@ namespace SynchronisationLibrary
                 // If it matches a subdirectory in the source, clean it as well.
                 DirectoryInfoBase targetDirectoryInfo = fileSystem.DirectoryInfo.FromDirectoryName(targetDirectoryPath);        
                 string sourceDirectoryPath = Path.Combine(sourcePath, targetDirectoryInfo.Name);
-                
-
                 if (fileSystem.Directory.Exists(sourceDirectoryPath))
                 {
-                    Result subDirectoryResult = Clean(fileSystem, targetDirectoryPath, sourceDirectoryPath, pattern, attributes);
+                    CleanResult subDirectoryResult = Clean(fileSystem, targetDirectoryPath, sourceDirectoryPath, pattern, attributes);
                     result.DirectoryResults.Add(targetDirectoryInfo.Name, subDirectoryResult);
                     continue;
                 }
@@ -195,7 +192,7 @@ namespace SynchronisationLibrary
             }
         }
         
-        private static void RaiseDirectoryCleanedEvent(string path, Result result)
+        private static void RaiseDirectoryCleanedEvent(string path, CleanResult result)
         {
             DirectoryCleanedEventHandler temp = DirectoryCleaned;
             if (temp != null)
