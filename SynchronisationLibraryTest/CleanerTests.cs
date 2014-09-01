@@ -11,11 +11,8 @@ using System.IO.Abstractions.TestingHelpers;
 namespace SynchronisationTest
 {
     // TODO:: 
-    // 1. use mock file/directory classes
-    // 2. check whether events are being raised correctly
-    // enable cleaner to be configured and scheduled through service
-    // replace any refs to System.IO.Path.Combine with methods on wrapper ie constructor accepting Directory, Name
-
+    // 1. check whether events are being raised correctly
+    
     [TestClass]
     public class CleanerTests
     {                

@@ -105,7 +105,7 @@ namespace SynchronisationLibrary
         // add separte method for top level call
         // and make recursive one private, so that different rules can apply
         // does this method need top level error handling?
-        public static PushDirectoryResult Push(IFileSystem fileSystem, string sourcePath, string targetPath, 
+        public static PushDirectoryResult PushDirectory(IFileSystem fileSystem, string sourcePath, string targetPath, 
             string pattern = "*.*", FileAttributes attributes = FileAttributes.Normal)
         {
             // If the source directory is null, throw an exception.
@@ -193,7 +193,7 @@ namespace SynchronisationLibrary
                 {
                     // I don't want the failure of one sub directory to kncker up all the others
                     PushDirectoryResult subDirectoryResult = 
-                        Push(fileSystem, sourceDirectoryPath, targetDirectoryPath, pattern, attributes);
+                        PushDirectory(fileSystem, sourceDirectoryPath, targetDirectoryPath, pattern, attributes);
                     result.DirectoryResults.Add(sourceDirectory.Name, subDirectoryResult);
                 }
                 catch (Exception ex)
@@ -208,7 +208,7 @@ namespace SynchronisationLibrary
             return result;
         }
 
-        private static PushEntryResult PushFile(IFileSystem fileSystem, string sourcePath, string targetPath) 
+        public static PushEntryResult PushFile(IFileSystem fileSystem, string sourcePath, string targetPath) 
         {
             // If the source file is null, throw an exception.
             if (sourcePath == null) 
@@ -239,7 +239,7 @@ namespace SynchronisationLibrary
             // If the target is identical to the source, mark it as verified.
             if (BytesEqual(sourceInfo, targetInfo)) 
             {
-                if (targetInfo.Attributes == sourceInfo.Attributes) 
+                if (targetInfo.Attributes == sourceInfo.Attributes) //attributes not being read (or written correctly)
                 { 
                     return PushEntryResult.Verified;                
                 }
