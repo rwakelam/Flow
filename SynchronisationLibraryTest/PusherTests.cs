@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using SynchronisationLibrary;
-//using WrapperLibrary;
 using System.IO.Abstractions;
 using System.IO.Abstractions.TestingHelpers;
 
@@ -134,9 +133,12 @@ namespace SynchronisationTest
             var fileSystem = new System.IO.Abstractions.TestingHelpers.MockFileSystem();
             fileSystem.AddFile(@"C:\Source\File.txt", new MockFileData("Data2"));
             fileSystem.AddFile(@"C:\Target\File.txt", new MockFileData("Data"));
+            fileSystem.File.SetAttributes(@"C:\Source\File.txt", FileAttributes.Hidden);
+            fileSystem.File.SetAttributes(@"C:\Target\File.txt", FileAttributes.Normal);
             Pusher.PushEntryResult result = Pusher.PushFile(fileSystem,
                 @"C:\Source\File.txt", @"C:\Target\File.txt");
             Assert.AreEqual("Data2", fileSystem.File.ReadAllText(@"C:\Target\File.txt"));
+            Assert.AreEqual(FileAttributes.Hidden, fileSystem.File.GetAttributes(@"C:\Target\File.txt"));
         }
 
         [TestMethod]
@@ -160,107 +162,70 @@ namespace SynchronisationTest
             // Prepare the source and target directories and files.
             var fileSystem = new System.IO.Abstractions.TestingHelpers.MockFileSystem();
             fileSystem.AddFile(@"C:\Source\File.txt", new MockFileData("Data"));
+            fileSystem.File.SetAttributes(@"C:\Source\File.txt", FileAttributes.Archive);
             Pusher.PushEntryResult result = Pusher.PushFile(fileSystem, @"C:\Source\File.txt",
                 @"C:\Target\File.txt");
             Assert.AreEqual("Data", fileSystem.File.ReadAllText(@"C:\Target\File.txt"));
+            Assert.AreEqual(FileAttributes.Archive, fileSystem.File.GetAttributes(@"C:\Target\File.txt"));
         }
 
-        //[TestMethod]
-        //public void TestPushFileWhenTargetMatchesSource()
-        //{
-        //    // Prepare the source and target directories and files.
-        //    IDirectory sourceDirectory = Common.CreateDirectory(Common.SourceDirectoryPath);
-        //    IDirectory targetDirectory = Common.CreateDirectory(Common.TargetDirectoryPath);
-        //    IFile sourceFile = Common.CreateFile("File.txt", Common.SourceDirectoryPath, new byte[] { 65 });
-        //    IFile targetFile = Common.CreateFile("File.txt", Common.TargetDirectoryPath, new byte[] { 65 });
-        //    Pusher.PushEntryResult result = Pusher.Push(sourceFile, targetFile);
-        //    Assert.AreEqual(Pusher.PushEntryResult.Verified, result);
-        //}
+        [TestMethod]
+        public void TestPushDirectoryByPattern()
+        {
+            // Prepare the source and target directories and files.
+            var fileSystem = new System.IO.Abstractions.TestingHelpers.MockFileSystem();
+            fileSystem.AddFile(@"C:\Source\File.txt", new MockFileData("Data"));
+            fileSystem.AddFile(@"C:\Source\File.doc", new MockFileData("Data"));
 
-        //[TestMethod]
-        //public void TestPushDirectoryByPattern()
-        //{
-        //    // Prepare the source and target directories and files.
-        //    IDirectory sourceDirectory = Common.CreateDirectory(Common.SourceDirectoryPath);
-        //    IDirectory targetDirectory = Common.CreateDirectory(Common.TargetDirectoryPath);
-        //    IFile soughtFile = Common.CreateFile("File.txt", Common.SourceDirectoryPath, new byte[] { 65 });
-        //    IFile unsoughtFile = Common.CreateFile("File.doc", Common.SourceDirectoryPath, new byte[] { 65 });
+            // Run the test.
+            Pusher.PushDirectoryResult result = Pusher.PushDirectory(fileSystem,
+                @"C:\Source", @"C:\Target", "*.txt");
 
-        //    // Run the test.
-        //    Pusher.PushDirectoryResult result = Pusher.Push(sourceDirectory, targetDirectory, "*.txt");
+            // Check the results
+            Assert.AreEqual("Data", fileSystem.File.ReadAllText(@"C:\Target\File.txt"));
+            Assert.IsFalse(fileSystem.File.Exists(@"C:\Target\File.doc"));
+        }
 
-        //    // Check the results
-        //    Assert.IsNotNull(result);
-        //    Assert.IsNotNull(result.CreatedFiles);
-        //    Assert.AreEqual(1, result.CreatedFiles.Count);
-        //    Assert.AreEqual(soughtFile.Name, result.CreatedFiles[0]);
-        //    Assert.IsNotNull(result.FailedEntries);
-        //    Assert.AreEqual(0, result.FailedEntries.Count);
-        //    Assert.IsNotNull(result.UpdatedFiles);
-        //    Assert.AreEqual(0, result.UpdatedFiles.Count);
-        //    Assert.IsNotNull(result.VerifiedFiles);
-        //    Assert.AreEqual(0, result.VerifiedFiles.Count);
-        //    Assert.IsNotNull(result.DirectoryResults);
-        //    Assert.AreEqual(0, result.DirectoryResults.Count);
-        //}
-        
-        //[TestMethod]
-        //public void TestPushDirectoryByAttributes()
-        //{
-        //    // Prepare the source and target directories and files.
-        //    IDirectory sourceDirectory = Common.CreateDirectory(Common.SourceDirectoryPath);
-        //    IDirectory targetDirectory = Common.CreateDirectory(Common.TargetDirectoryPath);
-        //    IFile soughtFile = Common.CreateFile("File.txt", Common.SourceDirectoryPath, new byte[] { 65 }, 
-        //        FileAttributesWrapper.Normal);
-        //    IFile unsoughtFile = Common.CreateFile("File2.txt", Common.SourceDirectoryPath, new byte[] { 65 }, 
-        //        FileAttributesWrapper.Hidden);
+        [TestMethod]
+        public void TestPushDirectoryByAttributes()
+        {
+            // Prepare the source and target directories and files.
+            var fileSystem = new System.IO.Abstractions.TestingHelpers.MockFileSystem();
+            fileSystem.AddFile(@"C:\Source\File1.txt", new MockFileData("Data"));
+            fileSystem.AddFile(@"C:\Source\File2.txt", new MockFileData("Data"));
+            fileSystem.File.SetAttributes(@"C:\Source\File1.txt", FileAttributes.Hidden);
+            fileSystem.File.SetAttributes(@"C:\Source\File2.txt", FileAttributes.Archive);
 
-        //    // Run the test.
-        //    Pusher.PushDirectoryResult result = Pusher.Push(sourceDirectory, targetDirectory, null, 
-        //        FileAttributesWrapper.Normal);
+            // Run the test.
+            Pusher.PushDirectoryResult result = Pusher.PushDirectory(fileSystem, 
+                @"C:\Source", @"C:\Target", "*.*", FileAttributes.Hidden);
 
-        //    // Check the results
-        //    Assert.IsNotNull(result);
-        //    Assert.IsNotNull(result.CreatedFiles);
-        //    Assert.AreEqual(1, result.CreatedFiles.Count);
-        //    Assert.AreEqual(soughtFile.Name, result.CreatedFiles[0]);
-        //    Assert.IsNotNull(result.FailedEntries);
-        //    Assert.AreEqual(0, result.FailedEntries.Count);
-        //    Assert.IsNotNull(result.UpdatedFiles);
-        //    Assert.AreEqual(0, result.UpdatedFiles.Count);
-        //    Assert.IsNotNull(result.VerifiedFiles);
-        //    Assert.AreEqual(0, result.VerifiedFiles.Count);
-        //    Assert.IsNotNull(result.DirectoryResults);
-        //    Assert.AreEqual(0, result.DirectoryResults.Count);
-        //}
+            // Check the results
+            Assert.AreEqual("Data", fileSystem.File.ReadAllText(@"C:\Target\File1.txt"));
+            Assert.IsFalse(fileSystem.File.Exists(@"C:\Target\File2.txt"));
+        }
 
-        //[TestMethod]
-        //public void TestPushDirectoryByPatternAndAttributes()// More like SyncDirectory? UpdateDirectory
-        //{
-        //    // Prepare the source and target directories and files.
-        //    IDirectory sourceDirectory = Common.CreateDirectory(Common.SourceDirectoryPath);
-        //    IDirectory targetDirectory = Common.CreateDirectory(Common.TargetDirectoryPath);
-        //    IFile soughtFile = Common.CreateFile("File.txt", Common.SourceDirectoryPath, new byte[] { 65 }, FileAttributesWrapper.Archive);
-        //    IFile unsoughtFile1 = Common.CreateFile("File.doc", Common.SourceDirectoryPath, new byte[] { 65 }, FileAttributesWrapper.Archive);
-        //    IFile unsoughtFile2 = Common.CreateFile("File2.txt", Common.SourceDirectoryPath, new byte[] { 65 }, FileAttributesWrapper.Normal);
+        [TestMethod]
+        public void TestPushDirectoryByPatternAndAttributes()
+        {
+            // Prepare the source and target directories and files.
+            var fileSystem = new System.IO.Abstractions.TestingHelpers.MockFileSystem();
+            fileSystem.AddFile(@"C:\Source\File1.txt", new MockFileData("Data"));
+            fileSystem.AddFile(@"C:\Source\File2.txt", new MockFileData("Data"));
+            fileSystem.AddFile(@"C:\Source\File3.doc", new MockFileData("Data"));
+            fileSystem.File.SetAttributes(@"C:\Source\File1.txt", FileAttributes.Hidden);
+            fileSystem.File.SetAttributes(@"C:\Source\File2.txt", FileAttributes.Archive);
+            fileSystem.File.SetAttributes(@"C:\Source\File3.doc", FileAttributes.Archive);
 
-        //    // Run the test.
-        //    Pusher.PushDirectoryResult result = Pusher.Push(sourceDirectory, targetDirectory, "*.txt", FileAttributesWrapper.Archive);
+            // Run the test.
+            Pusher.PushDirectoryResult result = Pusher.PushDirectory(fileSystem, 
+                @"C:\Source", @"C:\Target", "*.txt", FileAttributes.Archive);
 
-        //    // Check the results
-        //    Assert.IsNotNull(result);
-        //    Assert.IsNotNull(result.CreatedFiles);
-        //    Assert.AreEqual(1, result.CreatedFiles.Count);
-        //    Assert.AreEqual(soughtFile.Name, result.CreatedFiles[0]);
-        //    Assert.IsNotNull(result.FailedEntries);
-        //    Assert.AreEqual(0, result.FailedEntries.Count);
-        //    Assert.IsNotNull(result.UpdatedFiles);
-        //    Assert.AreEqual(0, result.UpdatedFiles.Count);
-        //    Assert.IsNotNull(result.VerifiedFiles);
-        //    Assert.AreEqual(0, result.VerifiedFiles.Count);
-        //    Assert.IsNotNull(result.DirectoryResults);
-        //    Assert.AreEqual(0, result.DirectoryResults.Count);
-        //}
+            // Check the results
+            Assert.IsFalse(fileSystem.File.Exists(@"C:\Target\File1.txt"));
+            Assert.AreEqual("Data", fileSystem.File.ReadAllText(@"C:\Target\File2.txt"));
+            Assert.IsFalse(fileSystem.File.Exists(@"C:\Target\File3.doc"));
+        }
         
     }
 }

@@ -227,40 +227,44 @@ namespace SynchronisationLibrary
             }
                         
             // If the target doesn't exist, try to create it now.
-            var sourceInfo = fileSystem.FileInfo.FromFileName(sourcePath);
             if (!fileSystem.File.Exists(targetPath)) 
             {
                 fileSystem.File.Copy(sourcePath, targetPath);
-                fileSystem.File.SetAttributes(targetPath, sourceInfo.Attributes);
                 return PushEntryResult.Created;
             }
-            var targetInfo = fileSystem.FileInfo.FromFileName(targetPath);
             
+            // Before opening the files, cache their attributes.
+            // This is done because opening some files appears to change their attributes 
+            // (ie from Hidden to Normal).  
+            var sourceAttributes = fileSystem.File.GetAttributes(sourcePath);
+            var targetAttributes = fileSystem.File.GetAttributes(targetPath);
+
             // If the target is identical to the source, mark it as verified.
+            var sourceInfo = fileSystem.FileInfo.FromFileName(sourcePath);
+            var targetInfo = fileSystem.FileInfo.FromFileName(targetPath);
             if (BytesEqual(sourceInfo, targetInfo)) 
             {
-                if (targetInfo.Attributes == sourceInfo.Attributes) //attributes not being read (or written correctly)
+                if (targetAttributes == sourceAttributes)
                 { 
                     return PushEntryResult.Verified;                
                 }
-                targetInfo.Attributes = sourceInfo.Attributes;
+                fileSystem.File.SetAttributes(targetPath, sourceAttributes);
                 return PushEntryResult.Updated;          
             }
-            fileSystem.File.Copy(sourcePath, targetPath, true);
-            targetInfo.Attributes = sourceInfo.Attributes;                        
+            fileSystem.File.Copy(sourcePath, targetPath, true);                  
             return PushEntryResult.Updated;            
         }
 
-        private static bool BytesEqual(FileInfoBase sourceFile, FileInfoBase targetFile)
+        private static bool BytesEqual(FileInfoBase file1, FileInfoBase file2)
         {
-            if (sourceFile.Length != targetFile.Length)
+            if (file1.Length != file2.Length)
             {
                 return false;
             }
 
-            int bufferCount = (int)Math.Ceiling((double)sourceFile.Length / BufferSize);
-            using (Stream sourceStream = sourceFile.OpenRead())
-            using (Stream targetStream = targetFile.OpenRead())
+            int bufferCount = (int)Math.Ceiling((double)file1.Length / BufferSize);
+            using (Stream sourceStream = file1.OpenRead())
+            using (Stream targetStream = file2.OpenRead())
             {
                 byte[] sourceBuffer = new byte[BufferSize];
                 byte[] targetBuffer = new byte[BufferSize];
