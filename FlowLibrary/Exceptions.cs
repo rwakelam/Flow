@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 
-namespace SynchronisationLibrary
+namespace FlowLibrary
 {
     public class SyncFileNotFoundException : FileNotFoundException
     {

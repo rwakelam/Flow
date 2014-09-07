@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using WrapperLibrary;
 
-namespace SynchronisationLibrary
+namespace FlowLibrary
 {
 
     public class FileSystemWrapper : IFileSystemWrapper

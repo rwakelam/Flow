@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading;
 using WrapperLibrary;
 
-namespace SynchronisationLibrary
+namespace FlowLibrary
 {
     public class SmartSynchroniser// RealTimeSynchronsier, LiveSynchronsier, OnDemandSynchroniser, 
     {// BatchSynchroniser, WatchfulSynchroniser, WatcherCopier

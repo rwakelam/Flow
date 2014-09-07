@@ -42,6 +42,9 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.IO.Abstractions">
+      <HintPath>..\packages\System.IO.Abstractions.1.4.0.86\lib\net35\System.IO.Abstractions.dll</HintPath>
+    </Reference>
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -54,13 +57,9 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\SynchronisationLibrary\SynchronisationLibrary.csproj">
-      <Project>{5EC32092-8B9A-46FA-9184-795C6729EB04}</Project>
-      <Name>SynchronisationLibrary</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\WrapperLibrary\WrapperLibrary.csproj">
-      <Project>{29EC7298-DA8F-451B-9EC2-23297A3AA5CF}</Project>
-      <Name>WrapperLibrary</Name>
+    <ProjectReference Include="..\FlowLibrary\FlowLibrary.csproj">
+      <Project>{5ec32092-8b9a-46fa-9184-795c6729eb04}</Project>
+      <Name>FlowLibrary</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

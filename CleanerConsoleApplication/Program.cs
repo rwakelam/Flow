@@ -2,9 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using SynchronisationLibrary;
+using FlowLibrary;
 using NDesk.Options;
-using WrapperLibrary;
+using System.IO;
+using System.IO.Abstractions;
 
 namespace CleanerConsoleApplication
 {
@@ -12,21 +13,21 @@ namespace CleanerConsoleApplication
     {
         static void Main(string[] args)
         {
-            DirectoryWrapper sourceDirectory = null;
-            DirectoryWrapper targetDirectory = null;
-            string targetFilePattern = null;
-            FileAttributesWrapper targetFileAttributes = FileAttributesWrapper.Any;
+            string sourcePath = null;
+            string targetPath = null;
+            string filePattern = null;
+            FileAttributes fileAttributes = FileAttributes.Normal;
             bool help = false;
 
             // Create the command line option set.
             OptionSet optionSet = new OptionSet();
             optionSet.Add("?", "Displays this help message.", v => help = true);
-            optionSet.Add("td:", "Target Directory.", v => targetDirectory = new DirectoryWrapper(v));
-            optionSet.Add("sd:", "Source Directory.", v => sourceDirectory = new DirectoryWrapper(v));
-            optionSet.Add("tfp:", @"Target File Pattern. Optional. Defaults to ""*.*"".", v => targetFilePattern = v ?? "*.*");
-            optionSet.Add("tfa:", @"Target File Attributes. Optional. Comma delimited list. Defaults to ""Any"".",
-                v => targetFileAttributes = v == null ? FileAttributesWrapper.Any : 
-                    (FileAttributesWrapper)Enum.Parse(typeof(FileAttributesWrapper), v));
+            optionSet.Add("td:", "Target Directory.", v => targetPath = v);
+            optionSet.Add("sd:", "Source Directory.", v => sourcePath = v);
+            optionSet.Add("fp:", @"File Pattern. Optional. Defaults to ""*.*"".", v => filePattern = v ?? "*.*");
+            optionSet.Add("fa:", @"ile Attributes. Optional. Comma delimited list. Defaults to ""Any"".",
+                v => fileAttributes = v == null ? FileAttributes.Normal : 
+                    (FileAttributes)Enum.Parse(typeof(FileAttributes), v));
             List<string> unknownOptions = optionSet.Parse(args);
 
             //
@@ -43,19 +44,20 @@ namespace CleanerConsoleApplication
                     consoleWriter.WriteInformation(GetHelpMessage(optionSet));
                     return;
                 }
-                if (targetDirectory == null)
+                if (targetPath == null)
                 {
                     consoleWriter.WriteError("Target Directory not specified.");
                     consoleWriter.WriteInformation(GetForHelpMessage());
                     return;
                 }
-                if (sourceDirectory == null)
+                if (sourcePath == null)
                 {
                     consoleWriter.WriteError("Source Directory not specified.");
                     consoleWriter.WriteInformation(GetForHelpMessage());
                     return;
                 }
-                Cleaner.Clean(targetDirectory, sourceDirectory, targetFilePattern, targetFileAttributes);
+                var fileSystem = new System.IO.Abstractions.FileSystem();
+                Cleaner.Clean(fileSystem, targetPath, sourcePath, filePattern, fileAttributes);
             }        
         }
         

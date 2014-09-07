@@ -86,9 +86,9 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\SynchronisationLibrary\SynchronisationLibrary.csproj">
-      <Project>{5EC32092-8B9A-46FA-9184-795C6729EB04}</Project>
-      <Name>SynchronisationLibrary</Name>
+    <ProjectReference Include="..\FlowLibrary\FlowLibrary.csproj">
+      <Project>{5ec32092-8b9a-46fa-9184-795c6729eb04}</Project>
+      <Name>FlowLibrary</Name>
     </ProjectReference>
     <ProjectReference Include="..\WrapperLibrary\WrapperLibrary.csproj">
       <Project>{29EC7298-DA8F-451B-9EC2-23297A3AA5CF}</Project>

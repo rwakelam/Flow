@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace SynchronisationLibrary
+namespace FlowLibrary
 {
     public abstract class PusherSubscriber : IDisposable
     {        

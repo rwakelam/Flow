@@ -5,7 +5,7 @@ using System.Text;
 using System.IO.Abstractions;
 using System.IO;
 
-namespace SynchronisationLibrary
+namespace FlowLibrary
 {
 
     public class Cleaner

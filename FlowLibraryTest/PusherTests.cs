@@ -4,11 +4,11 @@ using System.Text;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using SynchronisationLibrary;
+using FlowLibrary;
 using System.IO.Abstractions;
 using System.IO.Abstractions.TestingHelpers;
 
-namespace SynchronisationTest
+namespace FlowLibraryTest
 {
     [TestClass]
     public class PusherTests
@@ -226,6 +226,33 @@ namespace SynchronisationTest
             Assert.AreEqual("Data", fileSystem.File.ReadAllText(@"C:\Target\File2.txt"));
             Assert.IsFalse(fileSystem.File.Exists(@"C:\Target\File3.doc"));
         }
-        
+
+        [TestMethod]
+        public void TestPushResult()
+        {
+            // Prepare the source and target directories and files.
+            var fileSystem = new System.IO.Abstractions.TestingHelpers.MockFileSystem();
+            fileSystem.AddFile(@"C:\Source\File1.txt", new MockFileData("Data"));
+            fileSystem.AddFile(@"C:\Source\File2.txt", new MockFileData("NewData"));
+            fileSystem.AddFile(@"C:\Source\File3.txt", new MockFileData("Data"));
+            fileSystem.AddFile(@"C:\Target\File2.txt", new MockFileData("OldData"));
+            fileSystem.AddFile(@"C:\Target\File3.txt", new MockFileData("Data"));
+            //fileSystem.AddDirectory(@"C:\Source\SubDirectory");
+            //fileSystem.AddDirectory(@"C:\Target\SubDirectory");
+
+            // Run the test.
+            var result = Pusher.PushDirectory(fileSystem, @"C:\Source", @"C:\Target");
+
+            // Check the result.
+            Assert.AreEqual(1, result.CreatedFiles.Count);
+            Assert.AreEqual("File1.txt", result.CreatedFiles[0]);
+            Assert.AreEqual(1, result.UpdatedFiles.Count);
+            Assert.AreEqual("File2.txt", result.UpdatedFiles[0]);
+            Assert.AreEqual(1, result.VerifiedFiles.Count);
+            Assert.AreEqual("File3.txt", result.VerifiedFiles[0]);
+            Assert.AreEqual(0, result.FailedEntries.Count);
+            // TODO:: figure out how to spoof a fail an entry?
+            //Assert.AreEqual(1, result.DirectoryResults.Count);
+        }
     }
 }

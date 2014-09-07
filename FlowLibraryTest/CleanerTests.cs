@@ -4,11 +4,11 @@ using System.Text;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using SynchronisationLibrary;
+using FlowLibrary;
 using System.IO.Abstractions;
 using System.IO.Abstractions.TestingHelpers;
 
-namespace SynchronisationTest
+namespace FlowLibraryTest
 {
     // TODO:: 
     // 1. check whether events are being raised correctly
@@ -176,7 +176,7 @@ namespace SynchronisationTest
             fileSystem.AddDirectory(@"C:\Target\SubDirectory");
 
             // Run the test.
-            Cleaner.CleanResult result = Cleaner.Clean(fileSystem, @"C:\Target", @"C:\Source");
+            var result = Cleaner.Clean(fileSystem, @"C:\Target", @"C:\Source");
 
             // Check the result.
             Assert.AreEqual(1, result.MatchedFiles.Count);

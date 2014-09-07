@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 
-namespace SynchronisationLibrary
+namespace FlowLibrary
 {
     // treat it like wix; describe the structure that you want to end up with?
     // how would deletions work?

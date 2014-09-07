@@ -1,12 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
+using System.IO.Abstractions;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
-using SynchronisationLibrary;
+using FlowLibrary;
 using NDesk.Options;
-using WrapperLibrary;
 
 namespace PusherConsoleApplication
 {
@@ -16,21 +17,21 @@ namespace PusherConsoleApplication
 
         static void Main(string[] args)
         {
-            DirectoryWrapper sourceDirectory = null;
-            DirectoryWrapper targetDirectory = null;
-            string sourceFilePattern = null;
-            FileAttributesWrapper sourceFileAttributes = FileAttributesWrapper.Any;
+            string sourcePath = null;
+            string targetPath = null;
+            string filePattern = null;
+            FileAttributes fileAttributes = FileAttributes.Normal;
             bool help = false;
 
             // Create the options.
             OptionSet optionSet = new OptionSet();
             optionSet.Add("?", "Displays this help message.", v => help = true);
-            optionSet.Add("sd:", "Source Directory.", v => sourceDirectory = new DirectoryWrapper(v));
-            optionSet.Add("td:", "Target Directory.", v => targetDirectory = new DirectoryWrapper(v));
-            optionSet.Add("sfp:", @"Source File Pattern. Optional. Defaults to ""*.*"".", v => sourceFilePattern = v);
-            optionSet.Add("sfa:", @"Source File Attributes. Optional. Comma delimited list. Defaults to ""Any"".",
-                v => sourceFileAttributes = v == null ? FileAttributesWrapper.Any :
-                (FileAttributesWrapper)Enum.Parse(typeof(FileAttributesWrapper), v));
+            optionSet.Add("sd:", "Source Directory.", v => sourcePath = v);
+            optionSet.Add("td:", "Target Directory.", v => targetPath = v);
+            optionSet.Add("fp:", @"File Pattern. Optional. Defaults to ""*.*"".", v => filePattern = v);
+            optionSet.Add("fa:", @"File Attributes. Optional. Comma delimited list. Defaults to ""Any"".",
+                v => fileAttributes = v == null ? FileAttributes.Normal :
+                (FileAttributes)Enum.Parse(typeof(FileAttributes), v));
 
             //
             List<string> unknownOptions = optionSet.Parse(args);
@@ -47,19 +48,20 @@ namespace PusherConsoleApplication
                     consoleWriter.WriteInformation(GetHelpMessage(optionSet));
                     return;
                 }
-                if (targetDirectory == null)
+                if (targetPath == null)
                 {
                     consoleWriter.WriteError("Target Directory not specified.");
                     consoleWriter.WriteInformation(GetForHelpMessage());
                     return;
                 }
-                if (sourceDirectory == null)
+                if (sourcePath == null)
                 {
                     consoleWriter.WriteError("Source Directory not specified.");
                     consoleWriter.WriteInformation(GetForHelpMessage());
                     return;
                 }
-                Pusher.Push(sourceDirectory, targetDirectory, sourceFilePattern, sourceFileAttributes);
+                var fileSystem = new FileSystem();
+                Pusher.PushDirectory(fileSystem, sourcePath, targetPath, filePattern, fileAttributes);
             }
         }
 
@@ -70,12 +72,6 @@ namespace PusherConsoleApplication
             optionSyntaxes.AddRange(optionSet.Where(o => o.Prototype != "?").Select(GetOptionSyntax));            
             StringBuilder stringBuilder = new StringBuilder();
             stringBuilder.AppendLine("Pushes the contents of a source directory to a target directory.");
-            // Updates a backup directory (ie no deletions)
-            // Synchronises a target directory with a source one.  (implies deletions)          //  
-            // Copies the contents of a source directory to a target directory.
-            // SELECTIVE ASPECT IS WHAT I WANT TO CAPTURE, VERIFICATION
-            // Writer? Creater/Updater Pusher [ pushes contents of sourcce direcctory to target
-
             stringBuilder.AppendLine();
             stringBuilder.AppendLine("Syntax:");
             stringBuilder.AppendLine(string.Format("\t{0} /? | ({1})", typeof(Program).Assembly.GetName().Name,
