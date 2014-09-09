@@ -13,46 +13,22 @@ using System.Timers;
 using Microsoft.Win32;
 using FlowLibrary;
 using SynchronisationService.Configuration;
-using WrapperLibrary;
+using System.IO.Abstractions;
 
 namespace SynchronisationService
 {
-    // TODO:: 
-    // 4. test change of event source log name.
-    // streamline process so that only recently modified files are checked?
-    // implement a PushNew method? PushSince?
-    // synchroniser could record start time of last push itself
-    // it could really do with the time of the last sync being persisted somewhere externally
-    // otherwise the optimisation would only kick in second time round
-    // which would defeat the object, if the first time takes hours
-    // question is: where would you preserve the last sync time?
-    // could you get it from the server? only if there is only one client.
-    // could use a FileSystemWatcher - but again this would depend on the directories being sync-ed to start with
-    // there is some scope to optimise what I've got
-    // ie the 2 SynchroniseFile calls both replicate tests that have already been done at the directory level
-
-    // what about some sort of compare the latest loop?
-    // get the time of the last write on the source side
-    // get the time of the last write on the target side
-    // all of the source files which have been written to since the last write on the target side can go straight across
-    // get the time of the oldest write on the source side
-    // get the time of the oldest write on the target side
-    // everything on the source side which pre-dates the earliest target side write can safely be ignored.
-    // only the stuff between these two points needs to be checked against its twin
-
-    // in practice there will be huge swathes of files with identical write times
-    // if the latest write times in both directories match, chances are they are already in sync.
-    // if filecount is also the same, chance increases
-    // if oldest file is also the same higher still
-    // these metrics would have to take account of the copyability/deletability of the files.
-
-    // if source is more recent than target, sync source to target
-    // if source is older than most recent target, check source 
-    // eventually will hit 
-    // 
+   
     public partial class SynchronisationService : ServiceBase
     {
-
+        // create a file watcher for each pusher config element
+        // collect the paths of created/updated files
+        // will need to store target paths along with sourcce ones
+        // this necessitates dedicated class
+        // PushQueuer? class combines watcher, queue,  pusher
+        // alternatley queue could be centralised if watcher were wrapped
+        // in class which generated push tasks - PushFileTaskGenerator, Watcher
+        // PushMaker, TaskFactory? PushQueuer, PushDelegator, Recorder, PushArbiter
+        // tasks could be delegates
         #region Constants
         
         // Configuration
@@ -89,11 +65,12 @@ namespace SynchronisationService
 
         #region Fields
 
-        private Dictionary<string, Synchroniser> _Synchronisers;
-        private Logger _Logger;
+        private Dictionary<string, PushDelegator> _pushDelegators;
+        //private Logger _Logger;
         private Mode _Mode = DefaultMode;
         private System.Timers.Timer _Timer;
         private Object _Lock = new Object();
+        private Dictionary<string, string> _filePushTasks;
 
         #endregion
 
@@ -138,47 +115,49 @@ namespace SynchronisationService
             {
                 throw new ConfigurationErrorsException(String.Format(ConfigurationNotFoundMessage, ConfigurationSectionName));
             }
-            _Mode = serviceConfig.Mode;
-            if (_Mode == Mode.Timer)
-            {
-                _Timer.Interval = TimeSpan.FromMinutes(serviceConfig.TimerInterval).TotalMilliseconds;
-            }
-            string serviceConfiguredMessage = String.Format(ServiceConfiguredMessage, _Mode, serviceConfig.TimerInterval);
-            eventLog.WriteEntry(serviceConfiguredMessage, EventLogEntryType.Information);
+            //_Mode = serviceConfig.Mode;
+            //if (_Mode == Mode.Timer)
+            //{
+            //    _Timer.Interval = TimeSpan.FromMinutes(serviceConfig.TimerInterval).TotalMilliseconds;
+            //}
+            //string serviceConfiguredMessage = String.Format(ServiceConfiguredMessage, _Mode, serviceConfig.TimerInterval);
+            //eventLog.WriteEntry(serviceConfiguredMessage, EventLogEntryType.Information);
             //SubscriptionLevel loggingLevel = (SubscriptionLevel)Enum.Parse(typeof(SubscriptionLevel), serviceConfig.LoggingLevel);
 
-            // Create the synchronisers.
-            _Synchronisers = new Dictionary<string, Synchroniser>();
-            _Logger = new Logger(this, serviceConfig.LoggingLevel);
-            if (serviceConfig.Synchronisers != null) 
+            // Create the Directory push delegators.
+            _pushDelegators = new Dictionary<string, PushDelegator>();
+           // _Logger = new Logger(this, serviceConfig.LoggingLevel);
+            if (serviceConfig.Pushers != null) 
             {
-                IFileSystemWrapper fileSystemWrapper = FileSystemWrapper.GetFileSystemWrapper();
-                foreach (SynchroniserElement synchroniserConfig in serviceConfig.Synchronisers)
+                foreach (PusherElement pusherConfig in serviceConfig.Pushers)
                 {
                     try
                     {
-                        Synchroniser synchroniser = new Synchroniser(fileSystemWrapper,
-                            synchroniserConfig.ClientDirectory, 
-                            synchroniserConfig.ServerDirectory,
-                            synchroniserConfig.FilePattern, synchroniserConfig.DeleteUnmatchedEnabled);
-                        _Synchronisers.Add(synchroniserConfig.Name, synchroniser);
-                        _Logger.Subscribe(synchroniser);
+                        PushDelegator pushDelegator = new PushDelegator(
+                            pusherConfig.SourcePath, 
+                            pusherConfig.TargetPath,
+                            pusherConfig.Pattern, 
+                            pusherConfig.Attributes);
+                        _pushDelegators.Add(pusherConfig.Name, pushDelegator);
+                        pushDelegator.PushRequired += new PushDelegator.PushRequiredEventHandler(OnPushRequired); 
+
+                        //_Logger.Subscribe(pushDelegator);
                         string synchroniserCreatedMessage = String.Format(SynchroniserCreatedMessage, 
-                            synchroniserConfig.Name, synchroniserConfig.ClientDirectory,
-                            synchroniserConfig.ServerDirectory, synchroniserConfig.FilePattern, 
-                            synchroniserConfig.DeleteUnmatchedEnabled);
+                            pusherConfig.Name, pusherConfig.TargetPath,
+                            pusherConfig.SourcePath, pusherConfig.Pattern, 
+                            pusherConfig.Attributes);
                         eventLog.WriteEntry(synchroniserCreatedMessage, EventLogEntryType.Information);
                     }
                     catch (Exception ex)
                     {
-                        eventLog.WriteEntry(string.Format(SynchronsierNotCreatedMessage, synchroniserConfig.Name, ex.Message), 
+                        eventLog.WriteEntry(string.Format(SynchronsierNotCreatedMessage, pusherConfig.Name, ex.Message), 
                             EventLogEntryType.Error);
                     }
                 }
             }
             
             // Kick off a pull, but in a new thread so that the start method can still return in a timely fashion.
-            new Thread(Pull).Start(); 
+           // new Thread(Pull).Start(); 
 
             // Start the refresh mechanism.
             switch(_Mode)
@@ -190,6 +169,19 @@ namespace SynchronisationService
                     break;
             }            
 
+        }
+
+        private void OnPushRequired(PushDelegator.PushRequiredEventArgs e)
+        {//TODO: lock cache
+
+            lock (_Lock)
+            {
+                if (_filePushTasks.ContainsKey(e.SourcePath))
+                {
+                    return;
+                }
+                _filePushTasks.Add(e.SourcePath, e.TargetPath);
+            }
         }
 
         protected override void OnStop()
@@ -209,55 +201,21 @@ namespace SynchronisationService
         {
             eventLog.WriteEntry(TimerElapsedMessage, EventLogEntryType.Information);
             Push();           
-            Pull(); 
             _Timer.Start();
         }
-
-        private void Pull()
-        {
-            // Run the synchronisers.
-            lock(_Lock)
-            {
-                string directionName = Enum.GetName(typeof(Direction), Direction.Pull);
-                eventLog.WriteEntry(string.Format(SyncStartedMessage, directionName), EventLogEntryType.Information);
-                foreach (KeyValuePair<string, Synchroniser> kvp in _Synchronisers)
-                {
-                    try
-                    {
-                        eventLog.WriteEntry(String.Format(SynchroniserStartedMessage, kvp.Key), EventLogEntryType.Information);                    
-                        DirectorySyncResult result = kvp.Value.Pull();
-                        eventLog.WriteEntry(String.Format(SynchroniserCompletedMessage, kvp.Key), EventLogEntryType.Information);
-                    }
-                    catch (Exception ex)
-                    {
-                        eventLog.WriteEntry(String.Format(SynchroniserFailedMessage, kvp.Key, ex.Message), EventLogEntryType.Error);
-                    }
-                }
-                eventLog.WriteEntry(string.Format(SyncCompletedMessage, directionName), EventLogEntryType.Information);
-            }
-        }
-
+        
         private void Push()
         {
             // Run the synchronisers.
+
+            var fileSystem = new System.IO.Abstractions.FileSystem();
             lock (_Lock)
             {
-                string directionName = Enum.GetName(typeof(Direction), Direction.Push);
-                eventLog.WriteEntry(string.Format(SyncStartedMessage, directionName), EventLogEntryType.Information);
-                foreach (KeyValuePair<string, Synchroniser> kvp in _Synchronisers)
+                foreach (KeyValuePair<string, string> kvp in _filePushTasks)
                 {
-                    try
-                    {
-                        eventLog.WriteEntry(String.Format(SynchroniserStartedMessage, kvp.Key), EventLogEntryType.Information);
-                        DirectorySyncResult result = kvp.Value.Push();
-                        eventLog.WriteEntry(String.Format(SynchroniserCompletedMessage, kvp.Key), EventLogEntryType.Information);
-                    }
-                    catch (Exception ex)
-                    {
-                        eventLog.WriteEntry(String.Format(SynchroniserFailedMessage, kvp.Key, ex.Message), EventLogEntryType.Error);
-                    }
+                    Pusher.PushFile(fileSystem, kvp.Key, kvp.Value);
+                    //_filePushTasks.Remove(kvp.Key);
                 }
-                eventLog.WriteEntry(string.Format(SyncCompletedMessage, directionName), EventLogEntryType.Information);
             }
         }
                 

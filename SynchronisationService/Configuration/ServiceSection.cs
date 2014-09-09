@@ -11,20 +11,13 @@ namespace SynchronisationService.Configuration
     internal class ServiceSection : ConfigurationSection
     {
 
-        [ConfigurationProperty("Synchronisers")]
-        public SynchroniserCollection Synchronisers
+        [ConfigurationProperty("Pushers")]
+        public PusherCollection Pushers
         {
-            get { return ((SynchroniserCollection)(base["Synchronisers"])); }
-            set { base["Synchronisers"] = value; }
+            get { return ((PusherCollection)(base["Pushers"])); }
+            set { base["Pushers"] = value; }
         }
         
-        [ConfigurationProperty("Mode", DefaultValue = SynchronisationService.DefaultMode)]
-        public SynchronisationService.Mode Mode
-        {
-            get { return ((SynchronisationService.Mode)(base["Mode"])); }
-            set { base["Mode"] = value; }
-        }  
-
         [ConfigurationProperty("TimerInterval", DefaultValue = SynchronisationService.DefaultTimerInterval)]
         public double TimerInterval
         {

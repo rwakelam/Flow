@@ -6,8 +6,8 @@ using System.Text;
 
 namespace SynchronisationService.Configuration
 {
-    [ConfigurationCollection(typeof(SynchroniserElement))]
-    internal class SynchroniserCollection : ConfigurationElementCollection
+    [ConfigurationCollection(typeof(PusherElement))]
+    internal class PusherCollection : ConfigurationElementCollection
     {
 
         public override ConfigurationElementCollectionType CollectionType
@@ -17,20 +17,20 @@ namespace SynchronisationService.Configuration
 
         protected override ConfigurationElement CreateNewElement()
         {
-            return new SynchroniserElement();
+            return new PusherElement();
         }
 
         protected override string ElementName
         {
             get
             {
-                return "Synchroniser";
+                return "Pusher";
             }
         }
 
         protected override object GetElementKey(ConfigurationElement element)
         {
-            return ((SynchroniserElement)(element)).Name;
+            return ((PusherElement)(element)).Name;
         }
 
         protected override bool IsElementName(string elementName)

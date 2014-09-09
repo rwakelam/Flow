@@ -38,6 +38,10 @@
     <Reference Include="System.configuration" />
     <Reference Include="System.Configuration.Install" />
     <Reference Include="System.Core" />
+    <Reference Include="System.IO.Abstractions, Version=1.4.0.86, Culture=neutral, PublicKeyToken=d480b5b72fb413da, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\System.IO.Abstractions.1.4.0.86\lib\net35\System.IO.Abstractions.dll</HintPath>
+    </Reference>
     <Reference Include="System.Management" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -47,15 +51,15 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Logger.cs" />
+    <Compile Include="Configuration\PusherElement.cs" />
     <Compile Include="ProjectInstaller.cs">
       <SubType>Component</SubType>
     </Compile>
     <Compile Include="ProjectInstaller.Designer.cs">
       <DependentUpon>ProjectInstaller.cs</DependentUpon>
     </Compile>
-    <Compile Include="Configuration\SynchroniserCollection.cs" />
-    <Compile Include="Configuration\SynchroniserElement.cs" />
+    <Compile Include="Configuration\PusherCollection.cs" />
+    <Compile Include="PushDelegator.cs" />
     <Compile Include="SynchronisationService.cs">
       <SubType>Component</SubType>
     </Compile>
@@ -89,10 +93,6 @@
     <ProjectReference Include="..\FlowLibrary\FlowLibrary.csproj">
       <Project>{5ec32092-8b9a-46fa-9184-795c6729eb04}</Project>
       <Name>FlowLibrary</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\WrapperLibrary\WrapperLibrary.csproj">
-      <Project>{29EC7298-DA8F-451B-9EC2-23297A3AA5CF}</Project>
-      <Name>WrapperLibrary</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
