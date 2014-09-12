@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FlowLibraryTest", "FlowLibr
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FlowLibrary", "FlowLibrary\FlowLibrary.csproj", "{5EC32092-8B9A-46FA-9184-795C6729EB04}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Flow.Library.API", "Flow.Library.API\Flow.Library.API.csproj", "{64E28CC1-B8BE-469A-A874-19BB9A0A5AC3}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -73,6 +75,16 @@ Global
 		{5EC32092-8B9A-46FA-9184-795C6729EB04}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
 		{5EC32092-8B9A-46FA-9184-795C6729EB04}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{5EC32092-8B9A-46FA-9184-795C6729EB04}.Release|x86.ActiveCfg = Release|Any CPU
+		{64E28CC1-B8BE-469A-A874-19BB9A0A5AC3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{64E28CC1-B8BE-469A-A874-19BB9A0A5AC3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{64E28CC1-B8BE-469A-A874-19BB9A0A5AC3}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{64E28CC1-B8BE-469A-A874-19BB9A0A5AC3}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{64E28CC1-B8BE-469A-A874-19BB9A0A5AC3}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{64E28CC1-B8BE-469A-A874-19BB9A0A5AC3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{64E28CC1-B8BE-469A-A874-19BB9A0A5AC3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{64E28CC1-B8BE-469A-A874-19BB9A0A5AC3}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{64E28CC1-B8BE-469A-A874-19BB9A0A5AC3}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{64E28CC1-B8BE-469A-A874-19BB9A0A5AC3}.Release|x86.ActiveCfg = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

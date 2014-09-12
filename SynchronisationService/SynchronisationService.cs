@@ -149,7 +149,7 @@ namespace SynchronisationService
                             pusherConfig.Pattern, 
                             pusherConfig.Attributes);
                         _pushDelegators.Add(pusherConfig.Name, pushDelegator);
-                        pushDelegator.OnPushable += new PushableEventWatcher.OnPushableEventHandler(OnPushRequired); 
+                       // pushDelegator.OnPushable += new PushableEventWatcher.OnPushableEventHandler(OnPushRequired); 
 
                         //_Logger.Subscribe(pushDelegator);
                         string synchroniserCreatedMessage = String.Format(SynchroniserCreatedMessage, 
@@ -181,16 +181,16 @@ namespace SynchronisationService
 
         }
 
-        private void OnPushRequired(PushableEventWatcher.PushRequiredEventArgs e)
+        private void OnPushRequired()//PushableEventWatcher.PushRequiredEventArgs e)
         {
-            lock (_filePushTasks)
-            {
-                if (_filePushTasks.ContainsKey(e.SourcePath))
-                {
-                    return;
-                }
-                _filePushTasks.Add(e.SourcePath, e.TargetPath);
-            }
+            //lock (_filePushTasks)
+            //{
+            //    if (_filePushTasks.ContainsKey(e.SourcePath))
+            //    {
+            //        return;
+            //    }
+            //    _filePushTasks.Add(e.SourcePath, e.TargetPath);
+            //}
         }
 
         protected override void OnStop()
