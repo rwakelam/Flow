@@ -52,6 +52,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Configuration\PusherElement.cs" />
+    <Compile Include="EventArgs.cs" />
     <Compile Include="ProjectInstaller.cs">
       <SubType>Component</SubType>
     </Compile>
@@ -59,7 +60,8 @@
       <DependentUpon>ProjectInstaller.cs</DependentUpon>
     </Compile>
     <Compile Include="Configuration\PusherCollection.cs" />
-    <Compile Include="PushDelegator.cs" />
+    <Compile Include="PushableEventWatcher.cs" />
+    <Compile Include="PusherService.cs" />
     <Compile Include="SynchronisationService.cs">
       <SubType>Component</SubType>
     </Compile>

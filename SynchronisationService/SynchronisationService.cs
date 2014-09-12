@@ -18,6 +18,17 @@ using System.IO.Abstractions;
 namespace SynchronisationService
 {
    
+    // TODO:: rename as flow service
+    // TODO:: move push code to dedicated pusher service (thereby making space for potential CleanerService)
+    // TODO:: sort out file system injection
+    // TODO:: sort out queue locking
+    // TODO:: delete sync queue object
+    // TODO:: delete redundant eventargs, exceptions, constants
+    // TODO:: replace *.* with MatchAllPattern constant
+    // TODO:: figure out how to unit test service
+    // TODO:: fix wix service installer
+    // TODO:: implement push task class? make it runnable?
+
     public partial class SynchronisationService : ServiceBase
     {
         // create a file watcher for each pusher config element
@@ -65,11 +76,10 @@ namespace SynchronisationService
 
         #region Fields
 
-        private Dictionary<string, PushDelegator> _pushDelegators;
+        private Dictionary<string, PushableEventWatcher> _pushDelegators;
         //private Logger _Logger;
         private Mode _Mode = DefaultMode;
         private System.Timers.Timer _Timer;
-        private Object _Lock = new Object();
         private Dictionary<string, string> _filePushTasks;
 
         #endregion
@@ -125,7 +135,7 @@ namespace SynchronisationService
             //SubscriptionLevel loggingLevel = (SubscriptionLevel)Enum.Parse(typeof(SubscriptionLevel), serviceConfig.LoggingLevel);
 
             // Create the Directory push delegators.
-            _pushDelegators = new Dictionary<string, PushDelegator>();
+            _pushDelegators = new Dictionary<string, PushableEventWatcher>();
            // _Logger = new Logger(this, serviceConfig.LoggingLevel);
             if (serviceConfig.Pushers != null) 
             {
@@ -133,13 +143,13 @@ namespace SynchronisationService
                 {
                     try
                     {
-                        PushDelegator pushDelegator = new PushDelegator(
+                        PushableEventWatcher pushDelegator = new PushableEventWatcher(
                             pusherConfig.SourcePath, 
                             pusherConfig.TargetPath,
                             pusherConfig.Pattern, 
                             pusherConfig.Attributes);
                         _pushDelegators.Add(pusherConfig.Name, pushDelegator);
-                        pushDelegator.PushRequired += new PushDelegator.PushRequiredEventHandler(OnPushRequired); 
+                        pushDelegator.OnPushable += new PushableEventWatcher.OnPushableEventHandler(OnPushRequired); 
 
                         //_Logger.Subscribe(pushDelegator);
                         string synchroniserCreatedMessage = String.Format(SynchroniserCreatedMessage, 
@@ -171,10 +181,9 @@ namespace SynchronisationService
 
         }
 
-        private void OnPushRequired(PushDelegator.PushRequiredEventArgs e)
-        {//TODO: lock cache
-
-            lock (_Lock)
+        private void OnPushRequired(PushableEventWatcher.PushRequiredEventArgs e)
+        {
+            lock (_filePushTasks)
             {
                 if (_filePushTasks.ContainsKey(e.SourcePath))
                 {
@@ -209,14 +218,17 @@ namespace SynchronisationService
             // Run the synchronisers.
 
             var fileSystem = new System.IO.Abstractions.FileSystem();
-            lock (_Lock)
+            lock (_filePushTasks)
             {
+                // clone list and then pass it to new thread for processing?
                 foreach (KeyValuePair<string, string> kvp in _filePushTasks)
                 {
                     Pusher.PushFile(fileSystem, kvp.Key, kvp.Value);
                     //_filePushTasks.Remove(kvp.Key);
                 }
+                _filePushTasks.Clear();
             }
+            // kick off new thread which runs through list?
         }
                 
     }
