@@ -4,15 +4,17 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Flow.Library.API;
+using Flow.API;
+using FileFlow.API;
 
-namespace FlowLibrary
+namespace FileFlow
 {
-    public class FileWriter : IReceiver<Byte[]>
+    public class FileBytesWriter : IReceiver<Byte[]>
     {
         public void OnReceive(IMessage<Byte[]> message)
         {
-           // File.Create(message.Headers.TryGetValue("Path"))
+            string path = ((IFileMessage)message).Path;
+            File.WriteAllBytes(path, message.Payload);
         }
     }
 }

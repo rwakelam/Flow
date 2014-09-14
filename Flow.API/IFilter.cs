@@ -6,13 +6,12 @@ using System.Threading.Tasks;
 
 namespace Flow.API
 {
-    public interface IReceiver
+    public interface IFilter : IReceiver, ISender
     {
-        void OnReceive(IMessage message);
+        string Expression { get; set; }
     }
 
-    public interface IReceiver<T>
+    public interface IFilter<T> : IReceiver<T>, ISender<T>, IFilter
     {
-        void OnReceive(IMessage<T> message);
     }
 }
